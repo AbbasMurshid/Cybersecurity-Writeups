@@ -44,7 +44,8 @@ Note: Empty folders are placeholders for future topics as I expand my skills and
 
               
 
-TryHackMe: [Your TryHackMe Profile URL here]
+TryHackMe:
+[![TryHackMe](https://img.shields.io/badge/TryHackMe-Abbas%20Murshid-red?style=for-the-badge&logo=tryhackme)](https://tryhackme.com/p/AbbasMurshid)
 
 Email : abbasmurshidm@gmail.com --> Proffessional Use Only
 
