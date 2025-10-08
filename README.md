@@ -46,8 +46,7 @@ Note: Empty folders are placeholders for future topics as I expand my skills and
 
 TryHackMe: [Your TryHackMe Profile URL here]
 
-Email (optional): [your@email.com
-]
+Email : abbasmurshidm@gmail.com --> Proffessional Use Only
 
 🧠 Reminder
 
