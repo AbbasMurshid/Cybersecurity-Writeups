@@ -170,9 +170,11 @@ Code resource:
 
 [Cybersecurity-Writeups/Tools/Fermat_Factorization.py at main · AbbasMurshid/Cybersecurity-Writeups](https://github.com/AbbasMurshid/Cybersecurity-Writeups/blob/main/Tools/Fermat_Factorization.py)
 
-# This code runs 3 methods: optimized calculation, basic method follow, and iteration (it helps to understand each step). 
+**Note:This code runs 3 methods: optimized calculation, basic method follow, and iteration (it helps to understand each step).** 
 
-Or use this snippet:
+OR
+
+## use this snippet:
 
 ```
 from math import floor, sqrt
