@@ -78,4 +78,3 @@ Public Exponent (e): 65537
 
 ---
 
-This format is **professional, structured, and GitHub-ready**.
