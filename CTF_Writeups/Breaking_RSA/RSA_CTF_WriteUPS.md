@@ -35,7 +35,7 @@ Let’s go!
 
 I usually use Nmap to identify the services running on the target.
 
-![RSA_CTF_1.png](RSA_CTF_1.png)
+![RSA_CTF_1.png](images/RSA_CTF_1.png)
 
 We find SSH on port 22 and HTTP on port 80 running on the target machine.
 
@@ -43,19 +43,19 @@ We find SSH on port 22 and HTTP on port 80 running on the target machine.
 
 Use Gobuster to find hidden directories on the web server.
 
-![Hidden_Dir.png](Hidden_Dir.png)
+![Hidden_Dir.png](images/Hidden_Dir.png)
 
 Well done! We found a hidden directory named `development` on the web server. 
 
 **Let’s see the contents of that directory 10.201.76.151**
 
-![content_hidn.png](content_hidn.png)
+![content_hidn.png](images/content_hidn.png)
 
 **We found that two files are displayed.**
 
 **First, check log.txt**
 
-![log.png](log.png)
+![log.png](images/log.png)
 
 It’s a hint that the web server uses SSH but implements RSA insecurely.
 
@@ -69,7 +69,7 @@ Use ssh-keygen for SSH keys.
 
 Use the -l option to print the fingerprint of the public key; then we get the length.
 
-![key_length_blur.jpg](key_length_blur.jpg)
+![key_length_blur.jpg](images/key_length_blur.jpg)
 
 So, notice that the length of the discovered SSH public key is * bytes.
 
@@ -117,7 +117,7 @@ Step 2: run Python in the terminal.
 
 The code below was executed using my GitHub Python tool.
 
-![find_modulus (1).png](find_modulus_(1).png)
+![find_modulus (1).png](images/find_modulus_(1).png)
 
 Now we have n (modulus) and e. Use these to find p and q (this helps to create the private key). 
 Take the last 10 digits to answer the question in TryHackMe. 👍
@@ -204,7 +204,7 @@ Note: We need to add gmpy2 to this code. Read the resource I attached above. �
 
 After we run the Python program, we get p and q values. These are used to generate the private key.
 
-![](find_p_q.jpg)
+![](images/find_p_q.jpg)
 
 Woo-hoo! Now we have $n , e ,$ $p$ and $q$ values.
 
@@ -263,7 +263,7 @@ In my case:
 ssh -i Encrypted_FIle/private.pem root@10.201.35.208
 ```
 
-![flag.jpg](flag.jpg)
+![flag.jpg](images/flag.jpg)
 
 Woo-hoo! 🙌 After all the efforts, we get a flag. 
 
