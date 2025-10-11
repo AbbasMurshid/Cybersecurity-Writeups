@@ -39,6 +39,7 @@ I usually use Nmap to identify the services running on the target.
 
 We find SSH on port 22 and HTTP on port 80 running on the target machine.
 
+
 ## TASK 2: Find hidden directory on the web server
 
 Use Gobuster to find hidden directories on the web server.
@@ -62,6 +63,7 @@ It’s a hint that the web server uses SSH but implements RSA insecurely.
 We can find the two prime numbers using Fermat’s Factorization Method.
 
 **The second file, id_[rsa.pub](http://rsa.pub), is the SSH public key of the target machine (click to download).**
+
 
 ### TASK 3: Find the length of the RSA public key
 
@@ -139,6 +141,7 @@ AND
 
 [**Fermat’s Factorization Method - WIKIPEDIA
 **](https://en.wikipedia.org/wiki/Fermat%27s_factorization_method) 
+
 Okay! Now we know what Fermat’s Factorization Method is; then we move to find p and q using this mathematical algorithm →
 
 Apply Fermat’s Factorization concept in Python.
@@ -213,7 +216,8 @@ Woo-hoo! Now we have $n , e ,$ $p$ and $q$ values.
 We have to implement all discovered values (n, p, q, e), then compute d (which helps to create the private key). 
 Formula: 
  step 1:   $φ(n)=(p−1)×(q−1)$ 
-	step 2:  $d=e^{-1} \bmod φ(n)$
+	
+step 2:  $d=e^{-1} \bmod φ(n)$
 
 Implement this in the code snippet below:
 
