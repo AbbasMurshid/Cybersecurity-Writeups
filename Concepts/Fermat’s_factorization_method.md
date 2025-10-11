@@ -48,7 +48,7 @@ So instead of searching all possible factors of $n$, we just search values of $a
 
 1. Compute a=$\sqrt{n}$ 
 2. Compute $b^2 = a^2 - n$
-3. If b2b^2b2 is a perfect square, stop. Factors are:
+3. If b^2 is a perfect square, stop. Factors are:
     
     $p=a+b,q=a−b$
     
