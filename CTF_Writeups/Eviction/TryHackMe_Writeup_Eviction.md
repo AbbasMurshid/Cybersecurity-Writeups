@@ -20,7 +20,7 @@ Intelligence reports suggest APT28 is targeting organizations like E-Corp. We ne
 
 To solve this room, we first need to look at the MITRE ATT&CK page for **APT28**.
 
-![APT28_G0007.svg](APT28_G0007.svg)
+![APT28_G0007.svg](Eviction.assets/APT28_G0007.svg)
 
 **Link:**[https://static-labs.tryhackme.cloud/sites/eviction/](https://static-labs.tryhackme.cloud/sites/eviction/)
 
@@ -32,7 +32,7 @@ To solve this room, we first need to look at the MITRE ATT&CK page for **APT28**
 
 **Answer:** `[Spearphishing Link]`
 
-![image.png](image.png)
+![image.png](Eviction.assets/image.png)
 
 ### **Question 2 :**
 
@@ -42,7 +42,7 @@ Sunny identified that the APT might have moved forward from the recon phase. Whi
 
 **Answer:** `[Email account]`
 
-![image.png](image%201.png)
+![image.png](Eviction.assets/image_1.png)
 
 ## **Question 3 :**
 
@@ -52,7 +52,7 @@ E-corp has found that the APT might have gained initial access using social engi
 
 **Answer:** `[Malicious file and malicious link]``
 
-![image.png](image%202.png)
+![image.png](Eviction.assets/image_2.png)
 
 ## **Question 4 :**
 
@@ -62,7 +62,7 @@ If the above technique was successful, which scripting interpreters should Sunny
 
 **Answer:** `[Powershell and Windows Command shell]`
 
-![image.png](image%203.png)
+![image.png](Eviction.assets/image_3.png)
 
 ## Question 5:
 
@@ -72,7 +72,7 @@ While looking at the scripting interpreters identified in Q4, Sunny found some o
 
 **Answer:** `Registry Run Keys`
 
-![image.png](image%204.png)
+![image.png](Eviction.assets/image_4.png)
 
 ## Question 6:
 
@@ -83,7 +83,7 @@ I investigated the **Defense Evasion** tactic to see how APT28 hides their malic
 
 **Answer:** `[Rundll32]`
 
-![image.png](image%205.png)
+![image.png](Eviction.assets/image_5.png)
 
 ## Question 7:
 
@@ -95,7 +95,7 @@ The presence of **tcpdump** (a command-line packet analyzer) is a huge red flag.
 
 **Answer:** `Network Sniffing`
 
-![image.png](image%206.png)
+![image.png](Eviction.assets/image_6.png)
 
 ## Question 8:
 
@@ -105,7 +105,7 @@ It looks like the APT achieved lateral movement by exploiting remote services. W
 
 **Answer:** `SMB/Windows Admin Shares`
 
-![image.png](image%207.png)
+![image.png](Eviction.assets/image_7.png)
 
 ## Question 8:
 
@@ -114,7 +114,7 @@ It looked like the primary goal of the APT was to steal intellectual property fr
 **My Analysis:** For this question, I looked at the **Collection** tactic (TA0009), which covers how attackers gather data. The question specifically mentions "Information Repositories." Checking the **Data from Information Repositories** (T1213) technique for APT28, the intelligence shows they frequently target Microsoft **SharePoint** to find and steal internal documents and intellectual property.
 **Answer:** `SharePoint`
 
-![image.png](image%208.png)
+![image.png](Eviction.assets/image_8.png)
 
 ## Question 10:
 
@@ -126,7 +126,7 @@ Finally, I investigated the **Command and Control** (C2) tactic to see how APT28
 **Answer:** `External Proxy and Multi-hop Proxy`
  
 
-![image.png](image%209.png)
+![image.png](Eviction.assets/image_9.png)
 
 ## Question 11:
 
